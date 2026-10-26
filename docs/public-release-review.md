@@ -14,7 +14,7 @@ This is a source preparation record, not a claim that the public GitHub reposito
 
 ## Before making the repository public
 
-- Review original media/brand ownership and the first commit's file list.
+- Review original media/brand ownership and the first commit's file list. The owner confirmed ownership or redistribution permission for the three source-recipe attachments and derived recipes on 2026-10-26.
 - Confirm exact corresponding-source/build-script availability for each redistributed FFmpeg binary and linked library. A generic upstream link is not full clearance.
 - Verify platform-specific native dependency notices, including Velopack/.NET and Sparkle dependencies.
 - Enable GitHub private vulnerability reporting and test the reporting route. Do not advertise it as active before enabling it.

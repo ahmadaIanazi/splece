@@ -63,3 +63,8 @@ test('release feeds reject unsigned releases, changed archives and version reuse
   assert.throws(()=>releaseFeed(manifest,Buffer.from('changed'),signature,''),/checksum/);
   for(const version of ['0.1.2','0.1.3','1.0.0'])assert.throws(()=>releaseFeed(manifest,bytes,signature,'',version),/increasing/);
 });
+
+test('Windows keeps a completed check result after its native update window closes',async t=>{
+ const f=await fixture(t),root=path.join(f.bundle,'studio'),executable=path.join(f.bundle,'runtime/node.exe');await fs.mkdir(root);await fs.mkdir(path.dirname(executable));await fs.writeFile(executable,'fixture');await fs.writeFile(path.join(f.bundle,'Splece.exe'),'fixture');await fs.writeFile(path.join(root,'package.json'),JSON.stringify({version:'0.1.4'}));await fs.writeFile(path.join(root,'desktop-update.json'),JSON.stringify({engine:'velopack'}));
+ const svc=await createUpdateService({...f,root,executable,platform:'win32'});const state={pid:2147483647,root,version:'0.1.4',state:'current',message:'Up to date',updatedAt:Date.now()};await fs.writeFile(path.join(f.data,'launcher/update-state.json'),JSON.stringify(state));assert.equal((await svc.status()).state,'current');await fs.writeFile(path.join(f.data,'launcher/update-state.json'),JSON.stringify({...state,state:'downloading'}));assert.equal((await svc.status()).state,'idle');
+});

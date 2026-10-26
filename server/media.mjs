@@ -68,7 +68,7 @@ export async function thumbnail(file, out, time = 0) {
   ]);
 }
 
-export const PLAYBACK_PROFILE_VERSION = 2;
+export const PLAYBACK_PROFILE_VERSION = 3;
 export function playbackFrameRate(info) {
   const fps = Math.max(1, Math.min(60, info.fps || 30));
   for (const [value, expression] of [
@@ -138,6 +138,9 @@ export function preparePlayback(source, out) {
           "-af",
           "aresample=async=1:first_pts=0,apad",
           "-shortest",
+          // Bound padded audio to the source duration across FFmpeg platform builds.
+          "-t",
+          String(input.duration),
           "-map_metadata",
           "-1",
           "-movflags",

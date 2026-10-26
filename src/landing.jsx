@@ -556,7 +556,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                     <span>
                       {platform === "mac"
                         ? "Apple Silicon Mac (M1 or later), macOS 13+ and a current browser. Intel Macs are not supported by this beta."
-                        : platform === "linux" ? "Linux packaging is not available yet. Browse the app here and check back for release news." : "A 64-bit Windows 10/11 computer and a current browser. This unsigned beta was tested on a Windows runner; consumer-PC testing is ongoing."}
+                        : platform === "linux" ? "Ubuntu 22.04+ or compatible Debian 12+ desktop, x64. Experimental .deb package; other distributions and ARM are not supported." : "A 64-bit Windows 10/11 computer and a current browser. This unsigned beta was tested on a Windows runner; consumer-PC testing is ongoing."}
                     </span>
                   </p>
                 </div>
@@ -587,7 +587,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                   <p>
                     <strong>Designed for a simple install</strong>
                     <span>
-                      The planned downloads include the app runtime and video
+                      The desktop packages include the app runtime and video
                       tools. Developer tools are only needed if you choose to
                       run from source.
                     </span>

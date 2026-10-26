@@ -17,11 +17,12 @@ export async function createUpdateService({root,data,platform=process.platform,e
     const state=await fs.readFile(path.join(data,'launcher/update-state.json'),'utf8').then(JSON.parse).catch(()=>null);
     let alive=false;
     if(Number.isInteger(state?.pid) && state.pid>0) try { process.kill(state.pid,0); alive=true; } catch {}
-    const valid=supported && alive && state?.root===root && state?.version===pkg.version && states.has(state?.state) && Number.isFinite(state?.updatedAt) && state.updatedAt>=requestedAt;
+    const finished=platform==='win32' && Number.isInteger(state?.pid) && state.pid>0 && ['current','error','cancelled','idle'].includes(state?.state);
+    const valid=supported && (alive || finished) && state?.root===root && state?.version===pkg.version && states.has(state?.state) && Number.isFinite(state?.updatedAt) && state.updatedAt>=requestedAt;
     return {supported,version:pkg.version,platform,channel:'beta',state:valid?state.state:requestedAt && Date.now()-requestedAt>30000?'error':requestedAt?'opening':'idle',
       latestVersion:valid && typeof state.latestVersion==='string'?state.latestVersion.slice(0,40):null,
       checkedAt:valid?state.checkedAt||null:null,
-      message:!supported?'In-app updates are available in the installed desktop app.':valid?String(state.message||'').slice(0,500):requestedAt && Date.now()-requestedAt>30000?'The update window did not respond. Open Splece from your computer and try again.':requestedAt?'Opening the Splece update window…':''};
+      message:platform==='linux'?'Linux beta updates use a new .deb download. Your projects stay in your local data folder.':!supported?'In-app updates are available in the installed desktop app.':valid?String(state.message||'').slice(0,500):requestedAt && Date.now()-requestedAt>30000?'The update window did not respond. Open Splece from your computer and try again.':requestedAt?'Opening the Splece update window…':''};
   }
   async function check() {
     if(!supported) throw Object.assign(Error('Open the installed desktop app to check for updates.'),{status:409});

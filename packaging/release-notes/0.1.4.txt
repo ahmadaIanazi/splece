@@ -1,0 +1,1 @@
+Apache 2.0 licensing for original Splece code, creator credit and clearer About information. Dependency security updates and preserved third-party notices. Windows beta is unsigned; an experimental Ubuntu/Debian x64 installer is being prepared. Local projects and provider connections remain separate from the application.

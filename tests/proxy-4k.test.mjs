@@ -55,7 +55,7 @@ test("synthetic 4K landscape and portrait retain audio/timing/aspect with reusab
     assert.equal(info.height, height);
     assert.equal(info.fps, 24);
     assert.equal(info.audio, true);
-    assert.ok(Math.abs(info.duration - 2) < 0.1);
+    assert.ok(Math.abs(info.duration - 2) < 0.1, `Proxy duration ${info.duration}s must match the 2s source`);
     assert.equal(await hash(source), originalHash);
     assert.notEqual(proxy.path, source);
     assert.ok((await fs.stat(proxy.path)).size < (await fs.stat(source)).size);
