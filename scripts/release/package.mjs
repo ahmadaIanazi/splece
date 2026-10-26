@@ -61,6 +61,7 @@ await exec(
   { cwd: studio, timeout: 180000, maxBuffer: 2 * 1024 * 1024 },
 );
 await bundleFFmpeg(root,studio);
+await fs.cp(path.join(root,"packaging/licenses"),path.join(studio,"third-party-platform"),{recursive:true});
 for(const name of ['LICENSE','NOTICE','TRADEMARKS.md','ATTRIBUTION.md','THIRD_PARTY_NOTICES.md'])await fs.copyFile(path.join(root,name),path.join(studio,name));
 await exec(process.execPath,[path.join(root,'scripts/release/license-inventory.mjs'),path.join(studio,'third-party')],{cwd:root,timeout:30000,maxBuffer:2e6});
 // Frontend tooling is unnecessary in a prebuilt app and includes extra binaries.

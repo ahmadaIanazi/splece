@@ -23,3 +23,15 @@ Original procedural starter-template media is covered by the project's Apache-2.
 FFmpeg remains separately licensed and is invoked through its command-line interface. Its GPL redistribution obligations still apply to the binary even though Splece's original code uses Apache-2.0. The upstream binary distribution is https://github.com/eugeneware/ffmpeg-static/releases/tag/b6.1.1; Windows provenance and build details come from https://www.gyan.dev/ffmpeg/builds/ and the shipped README.
 
 Before declaring the complete binary distribution legally cleared, verify and preserve corresponding source, build scripts and source for linked libraries matching the exact platform binary. An upstream homepage link or top-level FFmpeg source alone is not evidence that all corresponding-source obligations are met. The public source-release review tracks this separately; this notice is not a substitute for the required source.
+
+## Windows 0.1.4 runtime notice copies
+
+This release uses Microsoft.NETCore.App.Runtime.win-x64 8.0.32 and Microsoft.WindowsDesktop.App.Runtime.win-x64 8.0.32, plus Velopack 1.2.161. Companion download notices are available at:
+
+- https://www.splece.com/legal/dotnet/LICENSE.txt
+- https://www.splece.com/legal/dotnet/THIRD-PARTY-NOTICES.txt
+- https://www.splece.com/legal/dotnet/WINFORMS-LICENSE.txt
+- https://www.splece.com/legal/dotnet/WPF-LICENSE.txt
+- https://www.splece.com/legal/VELOPACK-LICENSE.txt
+
+Copies are preserved in packaging/licenses for subsequent package builds. Verify versions again whenever the native runtime changes.

@@ -13,6 +13,7 @@ await fs.rm(path.join(studio,'dist/downloads'),{recursive:true,force:true});
 for(const name of ['scripts/studio-launcher.mjs','scripts/release/bundled-launcher.mjs']){await fs.mkdir(path.dirname(path.join(studio,name)),{recursive:true});await fs.copyFile(path.join(root,name),path.join(studio,name));}
 await exec(process.execPath,[process.env.npm_execpath,'ci','--omit=dev','--no-audit','--no-fund'],{cwd:studio,timeout:180000,maxBuffer:2e6});
 await bundleFFmpeg(root,studio);
+await fs.cp(path.join(root,"packaging/licenses"),path.join(studio,"third-party-platform"),{recursive:true});
 for(const name of ['LICENSE','NOTICE','TRADEMARKS.md','ATTRIBUTION.md','THIRD_PARTY_NOTICES.md'])await fs.copyFile(path.join(root,name),path.join(studio,name));
 await exec(process.execPath,[path.join(root,'scripts/release/license-inventory.mjs'),path.join(studio,'third-party')],{cwd:root,timeout:30000,maxBuffer:2e6});
 for(const name of ['vite','esbuild','@esbuild','rollup','@rollup','.bin'])await fs.rm(path.join(studio,'node_modules',name),{recursive:true,force:true});

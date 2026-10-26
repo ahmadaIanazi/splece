@@ -23,3 +23,11 @@ This is a source preparation record, not a claim that the public GitHub reposito
 - Update the app/website source link and remove “repository being prepared” only after the public URL works without authentication.
 
 No source repository or private history is published by the preparation script.
+
+## Verified candidate
+
+Private preparation repository: https://github.com/ahmadaIanazi/splece. It has new history and remains private. GitHub source checks run 40302164214 passed (build/tests plus redacted secret scans). Local final suite passed all 610 tests. The desktop installers have separate platform build records.
+
+The project owner confirmed ownership or redistribution permission for the three earlier reference attachments and derived prompt recipes. No paid AI calls were made during this work.
+
+.NET 8.0.32 and Velopack 1.2.161 license/notice copies are preserved in packaging/licenses and served with the Windows download. Future packages copy these into the studio's third-party-platform folder; refresh them whenever the runtime version changes. Exact FFmpeg corresponding-source/build-material coverage remains a release-review item.

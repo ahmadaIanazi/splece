@@ -10,7 +10,7 @@ Plan on a canvas, connect your own supported AI providers, compare takes, refine
 
 - [Mac beta](https://www.splece.com/beta/): Apple Silicon, macOS 13+. Signed and notarized.
 - [Windows beta](https://www.splece.com/beta/windows/): x64, Windows 10/11. Unsigned; Windows may show a publisher/reputation warning.
-- Linux: experimental Ubuntu/Debian x64 package under testing; see the website for current availability. Other distributions and ARM Linux are not claimed as supported.
+- [Linux beta](https://www.splece.com/beta/linux/): experimental Ubuntu 22.04+ / compatible Debian 12+ x64 .deb. Other distributions and ARM Linux are not supported by this package.
 
 Desktop packages bundle their runtime and video tools. Source setup below is for developers.
 
