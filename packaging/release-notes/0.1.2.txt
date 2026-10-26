@@ -1,0 +1,1 @@
+Check for updates from Settings or the Splece app menu. Download signed updates from splece.com and choose when to install and relaunch. Projects, media, API connections and preferences stay on your Mac. Active generation and saving work must finish before restarting. This first updater-enabled beta requires one manual installation for people using 0.1.1 or earlier.

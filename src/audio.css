@@ -1,0 +1,257 @@
+.sound-timeline {
+  position: relative;
+  padding-bottom: 6px;
+  color: #75b6b5;
+}
+.sound-timeline-tools {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 5px;
+  max-width: 100%;
+  background: #0c1118ec;
+  z-index: 4;
+  border-top: 1px solid #1e2c35;
+}
+.sound-selection {
+  flex: 1;
+  min-width: 30px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.sound-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #96afb9;
+  flex-shrink: 0;
+}
+.sound-tool:hover,
+.sound-tool.active {
+  background: #263d49;
+  color: #c2e6e5;
+}
+.sound-volume {
+  width: 80px;
+  accent-color: #74c3bf;
+}
+.sound-track {
+  position: relative;
+  height: 58px;
+  border-bottom: 1px solid #17212b;
+  background: #0c121980;
+}
+.sound-track-label {
+  position: absolute;
+  top: 2px;
+  z-index: 3;
+  font-size: 8px;
+  color: #688894;
+  pointer-events: none;
+}
+.sound-clip {
+  position: absolute;
+  height: 50px;
+  top: 4px;
+  background: #163033;
+  border: 1px solid #35595d;
+  border-radius: 5px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  overflow: hidden;
+}
+.sound-clip.selected {
+  border-color: #8edbd5;
+  box-shadow: 0 0 0 1px #8edbd550;
+  z-index: 4;
+}
+.sound-clip:active {
+  cursor: grabbing;
+  z-index: 5;
+}
+.sound-clip.muted {
+  opacity: 0.45;
+}
+.sound-clip-name {
+  position: absolute;
+  top: 2px;
+  left: 8px;
+  right: 5px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  color: #b1d5d3;
+  z-index: 2;
+  pointer-events: none;
+}
+.sound-waveform {
+  display: block;
+  width: 100%;
+  height: 50px;
+  color: #69b2ad;
+  overflow: hidden;
+}
+.sound-waveform path {
+  stroke: currentColor;
+  stroke-width: 1;
+  fill: none;
+}
+.sound-clip .sound-waveform {
+  height: 34px;
+  margin-top: 14px;
+  pointer-events: none;
+}
+.wave-status {
+  display: block;
+  font-size: 9px;
+  padding: 18px 8px;
+  color: #98aab8;
+  white-space: nowrap;
+}
+.sound-envelope {
+  position: absolute;
+  inset: 14px 0 0;
+  width: 100%;
+  height: 34px;
+  pointer-events: none;
+}
+.sound-envelope path {
+  fill: none;
+  stroke: #d2f6e970;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.sound-trim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  background: #b1dfd315;
+}
+.sound-trim.left {
+  left: 0;
+}
+.sound-trim.right {
+  right: 0;
+}
+.sound-trim:hover {
+  background: #b1dfd380;
+}
+.sound-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.sound-editor-actions select {
+  flex: 1;
+  min-width: 160px;
+}
+.sound-editor button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sound-help {
+  color: #92a4b7;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.sound-editor-card {
+  border: 1px solid #31404e;
+  border-radius: 9px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #151f29;
+}
+.sound-editor-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sound-editor-card header input {
+  flex: 1;
+  width: 100px;
+  background: transparent;
+  border-color: transparent;
+  font-weight: 600;
+}
+.sound-editor-card header span {
+  font-size: 10px;
+  color: #78adae;
+}
+.sound-fields {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.sound-fields label {
+  font-size: 10px;
+  color: #9badbd;
+}
+.sound-fields input {
+  display: block;
+  margin-top: 4px;
+  width: 100%;
+  padding: 6px;
+}
+.sound-fields small {
+  opacity: 0.5;
+}
+.sound-editor-bottom {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+.sound-editor-bottom input {
+  max-width: 160px;
+  accent-color: #74c3bf;
+}
+.sound-editor-bottom output {
+  font-size: 11px;
+  min-width: 40px;
+}
+.sound-editor-bottom button {
+  margin-left: auto;
+}
+.sound-editor-bottom small {
+  color: #7f9fa8;
+  font-size: 10px;
+}
+@media (max-width: 700px) {
+  .sound-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .sound-volume {
+    width: 40px;
+  }
+  .sound-editor-bottom {
+    flex-wrap: wrap;
+  }
+}
+/* Make room for intentional audio edits without adding source bars to every shot. */
+.timeline-content:has(.sound-timeline) > .video-lane {
+  min-height: 108px;
+}
+.sound-timeline-tools {
+  top: 0;
+}

@@ -1,0 +1,643 @@
+/* Scoped to the embedded prompt composer; never changes the editor geometry. */
+.creative-composer.dialogue-first {
+  container-type: inline-size;
+}
+.creative-composer.dialogue-first .creative-writing {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+  overflow: hidden;
+}
+.dialogue-stream {
+  --stream-speak: var(--accent-active, #74a8ff);
+  --stream-action: var(--category-audio, #43d9cc);
+  --stream-emote: var(--category-media, #ad8aff);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  color: var(--text-primary);
+}
+.stream-topbar,
+.stream-shots,
+.stream-cast,
+.stream-compose-heading,
+.stream-compose-actions,
+.stream-compose-actions > div,
+.stream-event > header,
+.stream-reorder,
+.stream-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stream-topbar {
+  justify-content: space-between;
+  margin: 4px 0 8px;
+  flex-shrink: 0;
+}
+.stream-shots {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 3px;
+}
+.creative-composer .stream-shots button {
+  white-space: nowrap;
+  min-height: 36px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+.stream-shots small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.creative-composer .stream-shots button[aria-pressed="true"] {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.creative-composer .stream-add-cast {
+  min-height: 36px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.stream-cast {
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 4px 3px 12px;
+}
+.creative-composer .stream-cast button {
+  border: 1px solid transparent;
+  border-radius: 24px;
+  min-height: 42px;
+  padding: 4px 12px 4px 5px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.creative-composer .stream-cast button[aria-pressed="true"] {
+  background: var(--selection-fill);
+  border-color: var(--selection-edge);
+  color: var(--selection-text);
+}
+.stream-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.stream-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stream-scroll {
+  flex: 1;
+  min-height: 70px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px 4px 20px;
+  scroll-padding: 16px;
+}
+.stream-scene {
+  margin: 0 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-canvas);
+}
+.stream-scene > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12px;
+  list-style: none;
+  color: var(--text-secondary);
+}
+.stream-scene > summary::-webkit-details-marker {
+  display: none;
+}
+.stream-scene > summary > small {
+  margin-left: auto;
+  font-size: 11px;
+}
+.stream-scene[open] > summary > svg:last-child {
+  transform: rotate(180deg);
+}
+.stream-scene-body {
+  padding: 4px 12px 12px;
+}
+.stream-field-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.creative-composer .stream-scene-body .canvas-prose {
+  font-size: 14px;
+  line-height: 1.65;
+  min-height: 70px;
+}
+.stream-direction-editor {
+  padding: 8px 0;
+}
+.stream-shot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+}
+.creative-composer .stream-shot-actions button {
+  font-size: 12px;
+  min-height: 36px;
+}
+.stream-events {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.stream-events > li {
+  --event-accent: var(--stream-speak);
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+.stream-events > li[data-kind="action"] {
+  --event-accent: var(--stream-action);
+}
+.stream-events > li[data-kind="emote"] {
+  --event-accent: var(--stream-emote);
+}
+.stream-relationship {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 4px 0 4px 18px;
+}
+.stream-relationship:before {
+  content: "";
+  width: 1px;
+  height: 18px;
+  background: var(--cc-line);
+}
+.stream-events > li[data-together="true"] .stream-relationship {
+  color: var(--stream-emote);
+}
+.stream-events > li[data-together="true"] .stream-relationship:before {
+  width: 12px;
+  height: 8px;
+  border-bottom: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+  background: none;
+}
+.stream-event {
+  padding: 10px 12px;
+  border: 1px solid var(--splece-border-control, #ffffff1f);
+  border-radius: 14px;
+  background: color-mix(
+    in srgb,
+    var(--surface-raised) 32%,
+    var(--surface-panel)
+  );
+  transition: border-color 140ms ease;
+}
+.stream-events > li[data-selected="true"] .stream-event,
+.stream-event:focus-within {
+  border-color: color-mix(in srgb, var(--event-accent) 65%, transparent);
+}
+.stream-events > li[data-together="true"] .stream-event {
+  margin-left: 16px;
+  border-left: 2px solid var(--stream-emote);
+}
+.stream-event > header {
+  margin-bottom: 5px;
+  min-width: 0;
+}
+.creative-composer .stream-event > header select {
+  min-width: 0;
+  max-width: 55%;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 7px 0;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.stream-event-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--event-accent);
+  white-space: nowrap;
+}
+.creative-composer .stream-event > header button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+}
+.creative-composer .stream-event > textarea {
+  display: block;
+  width: 100%;
+  padding: 5px 0;
+  min-height: 36px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
+  resize: vertical;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.65;
+  text-align: start;
+}
+.stream-event-options {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--splece-border-control, #ffffff1f);
+}
+.stream-option-row {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.stream-option-row > label {
+  flex: 1;
+  min-width: 85px;
+}
+.stream-event-options label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.creative-composer .stream-event-options :is(select, input) {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  border: 1px solid var(--splece-border-control, #ffffff1f);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.stream-delivery {
+  grid-template-columns: 90px minmax(0, 1fr);
+  align-items: center;
+}
+.stream-reorder {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.creative-composer .stream-reorder button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.stream-reorder button:nth-last-child(2) {
+  margin-left: auto;
+}
+.stream-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-secondary);
+}
+.stream-empty > svg {
+  color: var(--stream-speak);
+}
+.stream-empty h3 {
+  margin: 10px 0 8px;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 550;
+}
+.stream-empty p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.stream-compose {
+  flex-shrink: 0;
+  margin: 0 0 8px;
+  padding: 12px;
+  background: var(--surface-canvas);
+  border: 1px solid var(--splece-border-control, #ffffff1f);
+  border-radius: 16px;
+}
+.stream-compose:focus-within {
+  border-color: var(--selection-edge);
+}
+.stream-compose-heading {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.stream-compose-heading .stream-avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.stream-compose-heading > small {
+  margin-left: auto;
+  font-size: 11px;
+}
+.stream-input-label {
+  position: absolute;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.creative-composer .stream-compose > textarea {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  max-height: 160px;
+  padding: 10px 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+  text-align: start;
+}
+.stream-compose-actions {
+  justify-content: space-between;
+  gap: 4px;
+}
+.stream-compose-actions > div {
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.creative-composer .stream-compose-actions button {
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+.creative-composer .stream-compose-actions button[aria-pressed="true"] {
+  color: var(--selection-text);
+  background: var(--selection-fill);
+}
+.creative-composer .stream-compose-actions .stream-send {
+  width: 38px;
+  min-height: 38px;
+  background: var(--selection-fill);
+  color: var(--accent-active);
+  border: 1px solid var(--selection-edge);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.stream-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+/* Keep the saved scene readable on shorter laptop windows. Let the writing
+   area scroll instead of squeezing it behind the new-moment input. */
+@media (max-height: 760px) {
+  .creative-composer.dialogue-first .creative-writing {
+    overflow-y: auto;
+  }
+  .creative-composer.dialogue-first .dialogue-stream {
+    min-height: 430px;
+    flex-shrink: 0;
+  }
+}
+.stream-drop-before,
+.stream-drop-together {
+  display: block;
+  padding: 8px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--accent-active);
+  background: var(--selection-fill);
+  border: 1px dashed var(--selection-edge);
+  border-radius: 8px;
+}
+.stream-events > li[data-dragging="true"] {
+  opacity: 0.5;
+}
+.creative-composer .stream-clip-settings {
+  flex-shrink: 0;
+  padding: 0 18px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.stream-clip-settings > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  list-style: none;
+}
+.stream-clip-settings > summary::-webkit-details-marker {
+  display: none;
+}
+.stream-clip-settings > summary > span {
+  margin-left: auto;
+}
+.stream-clip-settings > .creative-timing {
+  padding: 8px 0;
+}
+.creative-composer.dialogue-first .creative-footer {
+  padding-top: 6px;
+}
+@container (max-width: 420px) {
+  .creative-composer.dialogue-first .creative-writing {
+    padding: 0 10px;
+  }
+  .stream-event {
+    padding: 8px 10px;
+  }
+  .stream-event-type {
+    font-size: 11px;
+    gap: 3px;
+  }
+  .stream-event > header {
+    gap: 5px;
+  }
+  .stream-compose {
+    padding: 10px;
+  }
+  .creative-composer .stream-compose-actions button {
+    padding: 7px;
+  }
+  .stream-scene > summary > small {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stream-event {
+    transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .creative-composer.dialogue-first .dialogue-stream button,
+  .creative-composer.dialogue-first .dialogue-stream select,
+  .creative-composer.dialogue-first .stream-clip-settings > summary {
+    min-height: 44px;
+  }
+  .creative-composer.dialogue-first .stream-event > header button,
+  .creative-composer.dialogue-first .stream-send {
+    min-width: 44px;
+  }
+}
+/* The input's containing form supplies a single, clearly visible focus ring. */
+.creative-composer.dialogue-first .stream-compose:focus-within {
+  outline: 2px solid var(--selection-edge);
+  outline-offset: 2px;
+}
+.creative-composer.dialogue-first .stream-compose > textarea:focus-visible {
+  outline: none;
+}
+
+/* Local refinements to the existing chat view. */
+.stream-character-picker {
+  position: relative;
+  min-width: 0;
+}
+.stream-event > header > .stream-character-picker {
+  flex: 1;
+}
+.creative-composer .stream-character-name,
+.creative-composer .stream-cast-choice {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: start;
+}
+.stream-character-name > span:last-child,
+.stream-cast-choice > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stream-message-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.stream-message-controls button[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.stream-compose-heading {
+  align-items: flex-start;
+}
+.stream-compose-heading > small {
+  padding-top: 7px;
+  white-space: nowrap;
+}
+.stream-compose-cast {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex: 1;
+  min-width: 0;
+}
+.stream-compose-cast > :is(.stream-character-picker, .stream-cast-choice) {
+  max-width: 180px;
+}
+.creative-composer .stream-compose-cast .stream-character-name {
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--selection-edge);
+  border-radius: 10px;
+  background: var(--selection-fill);
+  color: var(--selection-text);
+}
+.creative-composer .stream-compose-cast .stream-add-cast {
+  min-height: 30px;
+}
+.stream-character-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 30;
+  width: 230px;
+  max-width: 65cqw;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--splece-border-control, #ffffff1f);
+  border-radius: 10px;
+  background: var(--surface-panel, #191c24);
+}
+.creative-composer .stream-character-menu > button {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  font-size: 12px;
+  text-align: start;
+}
+.stream-compose .stream-character-menu {
+  top: auto;
+  bottom: calc(100% + 5px);
+}
+.creative-composer .stream-event .canvas-prose {
+  padding: 5px 0;
+  min-height: 36px;
+  font-size: 15px;
+  line-height: 1.65;
+  text-align: start;
+}
+.creative-composer .stream-compose .canvas-prose {
+  min-height: 56px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 10px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: start;
+}
+.stream-compose .mention-menu {
+  top: auto;
+  bottom: 100%;
+}
+.creative-composer .stream-relationship > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+  min-height: 24px;
+  font-size: 11px;
+  color: inherit;
+  background: transparent;
+}

@@ -1,0 +1,370 @@
+/* One continuous, quiet editing surface. Hierarchy colors match Story Studio. */
+.prompt-navigator {
+  background: #171b22;
+  border-right: 0;
+  box-shadow: inset -1px 0 #303743;
+}
+.prompt-pane {
+  background: #1b1f26;
+}
+.prompt-nav-scroll {
+  padding-top: 8px;
+  scrollbar-width: none;
+}
+.prompt-nav-item {
+  width: calc(100% - 8px);
+  margin-left: 8px;
+  border: 1px solid transparent;
+  border-right: 0;
+  border-radius: 9px 0 0 9px;
+  min-height: 39px;
+  padding-left: calc(8px + var(--depth, 0) * 9px);
+}
+.prompt-nav-item.group {
+  margin-top: 3px;
+}
+.prompt-nav-item svg {
+  color: var(--story-kind-color, #80aff5);
+}
+.prompt-nav-item.group .prompt-nav-label {
+  color: var(--story-kind-color, #bac7d9);
+}
+.prompt-nav-item.active {
+  background: #1b1f26;
+  border-color: #3d4a5d;
+  box-shadow: inset 3px 0 var(--story-kind-color, #80aff5);
+  color: #e4ecf9;
+}
+.prompt-nav-item.active:after {
+  border: 0;
+  width: 2px;
+  height: 100%;
+  top: 0;
+  right: 0;
+  background: #1b1f26;
+}
+.prompt-nav-item.active svg {
+  color: var(--story-kind-color, #80aff5);
+}
+.prompt-variations {
+  padding-right: 0;
+}
+.prompt-variations button.active {
+  border-radius: 6px 0 0 6px;
+  background: #1b1f26;
+  box-shadow: inset 2px 0 #668fc7;
+}
+
+.timeline-panel {
+  position: relative;
+  background: #090c11;
+  min-height: 260px;
+}
+.timeline-body {
+  margin-left: 44px;
+  position: relative;
+}
+.timeline-scroll {
+  background: transparent;
+  scrollbar-color: #293342 #090c11;
+}
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  background: none;
+  min-height: 100%;
+}
+.timeline-grid {
+  position: absolute;
+  inset: 25px 0 27px;
+  pointer-events: none;
+  background-image: linear-gradient(to right, #63789444 1px, transparent 1px);
+  background-size: var(--major-grid) 100%;
+  mask-image: linear-gradient(to top, #000, #0008 55%, transparent 92%);
+}
+.timeline-guides {
+  position: relative;
+  padding-top: 10px;
+  z-index: 1;
+}
+.story-guide-lane,
+.timeline-guides .remark-lane {
+  position: relative;
+  height: 21px;
+  background: none;
+  border: 0;
+}
+.story-guide-label,
+.timeline-guides .remark {
+  position: absolute;
+  top: 0;
+  height: 21px;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  padding: 0 4px;
+  background: none;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--story-kind-color, #93a4bc);
+  opacity: 0.85;
+}
+.story-guide-label span,
+.timeline-guides .remark span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.story-guide-label:hover,
+.timeline-guides .remark:hover {
+  background: none;
+  opacity: 1;
+  color: #e3ecfb;
+}
+.timeline-guides .remark {
+  font-size: 10px;
+  color: #b2bdce;
+  font-weight: 600;
+}
+.timeline-body .video-lane {
+  min-height: 158px;
+  height: auto;
+  flex: 1;
+}
+.timeline-body .video-lane::before {
+  top: calc(50% - 46px);
+  height: 92px;
+  background: linear-gradient(180deg, transparent, #435a7020 50%, transparent);
+}
+.timeline-body .clip.take-stack {
+  top: calc(50% - 46px);
+}
+.timeline-body .clip.take-stack:not(.selected):not(.draft-linked) {
+  border-color: #374557;
+}
+.timeline-content > .ruler {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  height: 28px;
+  z-index: 5;
+  border: 0;
+  background: linear-gradient(transparent, #090c11 45%);
+  user-select: none;
+  touch-action: none;
+}
+.ruler .ruler-tick {
+  top: 1px;
+  padding: 0;
+  height: 27px;
+}
+.ruler .ruler-tick:after {
+  top: 0;
+  height: 4px;
+  background: #334152;
+}
+.ruler .ruler-tick.second:after {
+  height: 7px;
+  background: #45546a;
+}
+.ruler .ruler-tick.major:after {
+  height: 11px;
+  background: #6b819e;
+}
+.ruler .ruler-tick b {
+  position: absolute;
+  top: 12px;
+  left: 4px;
+  font-weight: 400;
+  color: #677890;
+  font-size: 9px;
+}
+.ruler .ruler-tick.major b {
+  color: #91a2ba;
+}
+.timeline-content > .playhead {
+  top: 12px;
+  bottom: 21px;
+  background: linear-gradient(transparent, #99c2ff90 40%, #99c2ff);
+  z-index: 6;
+}
+.timeline-content > .playhead > div {
+  top: auto;
+  bottom: -3px;
+  height: 7px;
+  width: 7px;
+  left: -3px;
+  transform: rotate(180deg);
+}
+.timeline-edit-rail {
+  position: absolute;
+  left: 6px;
+  top: 12px;
+  max-height: calc(100% - 62px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 0;
+  background: linear-gradient(90deg, #090c11d9, #090c1160, transparent);
+  backdrop-filter: blur(5px);
+}
+.timeline-edit-rail .icon {
+  width: 28px;
+  height: 25px;
+  min-height: 25px;
+  flex-shrink: 0;
+  padding: 5px;
+  color: #8594aa;
+  border: 0;
+}
+.timeline-edit-rail .icon svg {
+  width: 15px;
+  height: 15px;
+}
+.timeline-edit-rail .icon.active {
+  background: #1d2b3d;
+  color: #a4c9fc;
+}
+.timeline-edit-rail .tool-separator {
+  width: 14px;
+  height: 1px;
+  margin: 4px 0;
+  background: #29313e;
+}
+.timeline-footer {
+  background: #11161e;
+  border-top: 1px solid #242c38;
+  min-height: 44px;
+  height: 44px;
+  padding-inline: 12px;
+}
+.footer-info {
+  gap: 10px;
+}
+.footer-info .clip-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+}
+.footer-info .clip-controls input {
+  width: 37px;
+  font-size: 9px;
+  padding: 4px;
+}
+.footer-info:has(.clip-controls) .footer-clip-count {
+  display: none;
+}
+.footer-utility-wrap {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+.footer-utilities {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+}
+.footer-utilities > .icon,
+.footer-utilities .clip-mixer > summary {
+  width: 26px;
+  height: 28px;
+  padding: 5px;
+  color: #8e9db3;
+  border: 0;
+}
+.footer-utilities > .icon svg {
+  width: 14px;
+  height: 14px;
+}
+.footer-utilities > .icon.active {
+  color: #9fc6ff;
+  background: #22334b;
+}
+.footer-utilities > input[type="range"] {
+  width: 55px;
+  height: 3px;
+  padding: 0;
+  margin: 0 3px;
+  accent-color: #8bb4ee;
+}
+.footer-utilities .tool-separator {
+  margin-inline: 4px;
+}
+.footer-utilities .clip-mixer-panel {
+  bottom: 36px;
+}
+.footer-tools-toggle {
+  display: none;
+}
+.repair-range-controls {
+  position: relative;
+  z-index: 7;
+  width: max-content;
+  max-width: 100%;
+  background: #121a25;
+  border-radius: 5px;
+}
+@media (max-width: 1100px) {
+  .footer-tools-toggle {
+    display: flex;
+  }
+  .footer-utilities {
+    display: none;
+    position: absolute;
+    bottom: 40px;
+    right: 0;
+    z-index: 20;
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    padding: 10px;
+    background: #18212d;
+    border: 1px solid #35465c;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px #0008;
+    flex-wrap: wrap;
+  }
+  .footer-utility-wrap[data-open="true"] .footer-utilities {
+    display: flex;
+  }
+  .footer-info .clip-controls {
+    display: none;
+  }
+  .footer-utilities .clip-mixer-panel {
+    right: -80px;
+  }
+}
+@media (max-height: 700px) {
+  .editor-shell .timeline-panel {
+    min-height: 190px;
+    height: clamp(190px, 32dvh, 245px);
+  }
+  .timeline-body .video-lane {
+    min-height: 118px;
+  }
+  .timeline-body .clip.take-stack {
+    height: 76px;
+    top: calc(50% - 38px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-nav-item {
+    transition: none;
+  }
+}
+/* Off-screen ruler labels must never enlarge the scrollable timeline. */
+.timeline-content > .ruler {
+  overflow: hidden;
+}
+.timeline-guides .remark[class*="story-kind-"] {
+  color: var(--story-kind-color, #b2bdce);
+}

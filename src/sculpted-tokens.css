@@ -1,0 +1,41 @@
+/* Approved Sculpted system: design/sculpted/DESIGN-SYSTEM.md.
+   Shared by the application and public site. */
+:root,
+[data-splece-theme="sculpted"] {
+  --splece-surface-canvas: #090a0d;
+  --splece-surface-panel: #14161c;
+  --splece-surface-raised: #252832;
+  --splece-surface-recessed: #060709;
+  --splece-text-primary: #f5f4fa;
+  --splece-text-secondary: #a9aebb;
+  --splece-action-primary: #0866ff;
+  --splece-action-hover: #0059e5;
+  --splece-action-foreground: #ffffff;
+  --splece-accent-active: #74a8ff;
+  --splece-selection-fill: #11213c;
+  --splece-selection-edge: #3e72ba;
+  --splece-selection-text: #e2edff;
+  --splece-category-media: #ad8aff;
+  --splece-category-audio: #43d9cc;
+  --splece-category-title: #f28bc8;
+  --splece-category-timing: #ffb36a;
+  --splece-border-divider: rgb(255 255 255 / 4%);
+  --splece-highlight-surface: rgb(255 255 255 / 6%);
+  --splece-border-control: rgb(255 255 255 / 12%);
+  --splece-status-success: #84d3a0;
+  --splece-radius-panel: 20px;
+  --splece-radius-card: 16px;
+  --splece-radius-well: 14px;
+  --splece-radius-segment: 10px;
+  --splece-radius-action: 15px;
+  --splece-radius-control: 9px;
+  --splece-radius-label: 6px;
+  --splece-shadow-well:
+    inset 0 1px 4px rgb(0 0 0 / 44%), 0 1px rgb(255 255 255 / 2%);
+  --splece-shadow-raised:
+    0 2px 6px rgb(0 0 0 / 38%), inset 0 1px var(--splece-highlight-surface);
+  --splece-shadow-action:
+    inset 0 1px rgb(255 255 255 / 19%), 0 5px 20px rgb(8 102 255 / 16%);
+  --splece-shadow-selection: 0 0 12px rgb(8 102 255 / 7%);
+  --splece-duration-state: 150ms;
+}

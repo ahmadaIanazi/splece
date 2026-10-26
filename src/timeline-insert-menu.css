@@ -1,0 +1,60 @@
+.frame-insert-root {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  height: 0;
+}
+.frame-insert-options {
+  position: absolute;
+  top: 70px;
+  left: var(--frame-popover-shift, 0px);
+  z-index: 60;
+  display: flex;
+  gap: 4px;
+  width: max-content;
+  padding: 6px;
+  border: 1px solid var(--border-subtle, #343740);
+  border-radius: 14px;
+  background: var(--surface-panel, #191b22);
+  box-shadow: 0 10px 30px #0007;
+  animation: insert-menu-in 0.14s ease-out;
+}
+.frame-insert-options > button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  width: 63px;
+  min-height: 61px;
+  padding: 9px 7px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, #babecb);
+  font-size: 10px;
+}
+.frame-insert-options > button:hover,
+.frame-insert-options > button:focus-visible {
+  background: var(--selection-fill, #303848);
+  color: var(--text-primary, #f0f0f4);
+}
+.frame-insert-trigger[aria-expanded="true"] {
+  background: var(--accent, #8db9fb);
+  color: var(--surface-sunken, #11131b);
+}
+@keyframes insert-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame-insert-options {
+    animation: none;
+  }
+}

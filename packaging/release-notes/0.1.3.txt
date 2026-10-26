@@ -1,0 +1,1 @@
+A clearer Mac installer: drag Splece into Applications, then open it. Settings retains signed in-app updates. This release also prepares the Windows beta installer and its update infrastructure; Windows distribution is still being tested.

@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {bundleFFmpeg} from '../scripts/release/bundle-ffmpeg.mjs';
+for(const platform of ['win32','linux'])test(`bundled ${platform} FFmpeg retains its platform-specific original notices`,async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'splece-notices-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));const from=path.join(root,'node_modules/ffmpeg-static');await fs.mkdir(from,{recursive:true});const binary=platform==='win32'?'ffmpeg.exe':'ffmpeg';
+ await fs.writeFile(path.join(from,binary),'test executable');await fs.writeFile(path.join(from,binary+'.LICENSE'),'upstream license');await fs.writeFile(path.join(from,binary+'.README'),'exact build provenance');const studio=path.join(root,'studio');await bundleFFmpeg(root,studio,platform);
+ assert.equal(await fs.readFile(path.join(studio,'vendor/ffmpeg/ffmpeg.LICENSE'),'utf8'),'upstream license');assert.equal(await fs.readFile(path.join(studio,'vendor/ffmpeg/ffmpeg.README'),'utf8'),'exact build provenance');assert.equal(await fs.readFile(path.join(studio,'vendor/ffmpeg',binary),'utf8'),'test executable');
+});

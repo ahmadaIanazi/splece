@@ -1,0 +1,19 @@
+import os
+application = defines['app']
+files = [application]
+symlinks = {'Applications': '/Applications'}
+background = defines['background']
+icon = os.path.join(application, 'Contents', 'Resources', 'Splece.icns')
+window_rect = ((120, 120), (720, 560))
+icon_locations = {'Splece.app': (190, 270), 'Applications': (530, 270)}
+icon_size = 96
+text_size = 15
+label_pos = 'bottom'
+default_view = 'icon-view'
+show_status_bar = False
+show_tab_view = False
+show_toolbar = False
+show_pathbar = False
+show_sidebar = False
+arrange_by = None
+format = 'UDZO'

@@ -1,0 +1,13 @@
+.prompt-library { display:grid; gap:12px; padding:16px; max-width:760px; }
+.prompt-library h3,.prompt-library h4,.prompt-library p { margin:0; }
+.prompt-library label,.reference-role-control label,.clip-continuity-editor label { display:grid; gap:6px; }
+.prompt-library textarea,.clip-continuity-editor textarea { min-height:80px; width:100%; }
+.prompt-library pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:13px; max-height:380px; overflow:auto; padding:12px; background:var(--bg,#151515); border-radius:8px; }
+.prompt-library-choices { display:flex; gap:8px; flex-wrap:wrap; }
+.prompt-library-choices button { display:grid; gap:4px; text-align:left; }
+.prompt-library-choices [aria-pressed=true] { outline:2px solid currentColor; }
+.prompt-library details,.clip-continuity-editor { border:1px solid var(--border,#555); border-radius:8px; padding:10px; }
+.prompt-library summary,.clip-continuity-editor summary { cursor:pointer; }
+.prompt-library small,.reference-role-control small { opacity:.75; }
+.prompt-library-preset,.reference-role-control { display:grid; gap:10px; }
+.clip-continuity-editor[open] > * + * { margin-top:10px; }

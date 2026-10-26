@@ -1,0 +1,191 @@
+.sound-inspector {
+  flex: 0 0 288px;
+  width: 288px;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  scrollbar-width: none;
+  box-sizing: border-box;
+  margin: 8px 8px 8px 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-radius: var(--splece-radius-panel);
+  background: var(--splece-surface-panel);
+  color: var(--splece-text-primary);
+}
+.sound-inspector::-webkit-scrollbar {
+  display: none;
+}
+.sound-inspector header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.sound-inspector header strong {
+  flex: 1;
+}
+.sound-inspector button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  min-width: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--splece-radius-control);
+  background: var(--splece-surface-raised);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    background var(--splece-duration-state),
+    color var(--splece-duration-state);
+}
+.sound-inspector button:hover {
+  background: var(--splece-selection-fill);
+  color: var(--splece-selection-text);
+}
+.sound-inspector button:focus-visible,
+.sound-inspector input:focus-visible,
+.sound-inspector summary:focus-visible {
+  outline: 2px solid var(--splece-accent-active);
+  outline-offset: 3px;
+}
+.sound-inspector header button {
+  background: transparent;
+}
+.sound-inspector label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--splece-text-secondary);
+  min-width: 0;
+}
+.sound-inspector input:not([type="range"]) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--splece-border-control);
+  border-radius: var(--splece-radius-control);
+  background: var(--splece-surface-recessed);
+  color: var(--splece-text-primary);
+  font: inherit;
+}
+.sound-inspector input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--splece-accent-active);
+  cursor: pointer;
+}
+.sound-inspector-slider > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sound-inspector-slider output {
+  font-variant-numeric: tabular-nums;
+}
+.sound-inspector-level {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 12px;
+  align-items: end;
+}
+.sound-inspector-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.sound-inspector-timing summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--splece-text-secondary);
+  padding: 6px 0;
+}
+.sound-inspector-timing[open] summary {
+  margin-bottom: 12px;
+}
+.sound-inspector-number {
+  position: relative;
+}
+.sound-inspector-number input {
+  padding-right: 22px !important;
+}
+.sound-inspector-number > span {
+  position: absolute;
+  inset: 11px 12px auto auto;
+  pointer-events: none;
+}
+.sound-audition {
+  padding: 12px;
+  background: var(--splece-surface-recessed);
+  border-radius: var(--splece-radius-well);
+}
+.sound-audition-wave {
+  position: relative;
+  height: 44px;
+  color: var(--splece-category-audio);
+}
+.sound-audition-wave .sound-waveform {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.75;
+}
+.sound-audition-transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.sound-audition-transport small {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--splece-text-secondary);
+}
+.sound-audition audio {
+  display: none;
+}
+.sound-inspector-error {
+  display: block;
+  color: var(--splece-category-timing);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.sound-inspector footer {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+.sound-inspector footer button {
+  flex: 1;
+}
+.sound-inspector footer button:last-child {
+  color: var(--danger, #ff8989);
+}
+@media (pointer: coarse) {
+  .sound-inspector button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .sound-inspector-level {
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-inspector button {
+    transition: none;
+  }
+}

@@ -1,0 +1,423 @@
+/* UI Apple, adapted to the embedded dark web composer.
+   Tokens live on an explicit opt-in root; no Editor or Structure selectors. */
+.prompt-composer-apple {
+  --pc-primary: #0066cc;
+  --pc-focus: #0071e3;
+  --pc-link: #2997ff;
+  --pc-text: #ffffff;
+  --pc-muted: #cccccc;
+  --pc-surface: #252527;
+  --pc-group: #272729;
+  --pc-raised: #2a2a2c;
+  --pc-rule: color-mix(in srgb, var(--pc-text) 15%, var(--pc-surface));
+  --pc-soft-rule: color-mix(in srgb, var(--pc-text) 8%, var(--pc-surface));
+  --pc-selected: color-mix(in srgb, var(--pc-primary) 18%, var(--pc-surface));
+  --pc-hover: color-mix(in srgb, var(--pc-text) 6%, var(--pc-surface));
+  --pc-danger: #ff3b30;
+  --pc-xxs: 2px;
+  --pc-xs: 4px;
+  --pc-sm: 8px;
+  --pc-md: 12px;
+  --pc-base: 16px;
+  --pc-lg: 20px;
+  --pc-xl: 24px;
+  --pc-xxl: 32px;
+  --pc-radius-sm: 6px;
+  --pc-radius-md: 10px;
+  --pc-radius-lg: 14px;
+  --pc-radius-xl: 20px;
+  --pc-pill: 999px;
+  --pc-hairline: 1px;
+  --pc-focus-width: 2px;
+  --pc-body: 17px;
+  --pc-callout: 15px;
+  --pc-caption: 13px;
+  --pc-micro: 11px;
+  --pc-headline: 20px;
+  --pc-line: 1.5;
+  --pc-regular: 400;
+  --pc-semibold: 600;
+  --pc-bold: 700;
+  --pc-control: 36px;
+  --pc-touch: 44px;
+  --pc-motion: 180ms;
+  --pc-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --pc-font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  /* Bridge existing composer-only components to the same palette. */
+  --text-primary: var(--pc-text);
+  --text-secondary: var(--pc-muted);
+  --text-muted: var(--pc-muted);
+  --surface-panel: var(--pc-surface);
+  --surface-canvas: var(--pc-group);
+  --surface-raised: var(--pc-raised);
+  --accent-active: var(--pc-link);
+  --selection-edge: var(--pc-link);
+  --selection-fill: var(--pc-selected);
+  --selection-text: var(--pc-text);
+  --divider: var(--pc-rule);
+  --splece-border-control: var(--pc-rule);
+  --cc-blue: var(--pc-link);
+  --cc-muted: var(--pc-muted);
+  --cc-line: var(--pc-rule);
+  --shadow-raised: none;
+  font-family: var(--pc-font);
+  font-weight: var(--pc-regular);
+  color: var(--pc-text);
+}
+:is(.creative-composer, .composer-companion, .shell).prompt-composer-apple {
+  background: var(--pc-surface);
+  box-shadow: none;
+  text-shadow: none;
+}
+.prompt-composer-apple.prompt-composer-apple
+  :is(button, input, select, textarea) {
+  font-family: var(--pc-font);
+  font-weight: var(--pc-regular);
+  box-shadow: none;
+  text-shadow: none;
+}
+.prompt-composer-apple.prompt-composer-apple :is(button, summary) {
+  transition:
+    background-color var(--pc-motion) var(--pc-ease),
+    color var(--pc-motion) var(--pc-ease),
+    border-color var(--pc-motion) var(--pc-ease);
+  touch-action: manipulation;
+}
+.prompt-composer-apple.prompt-composer-apple button {
+  color: var(--pc-muted);
+  border-radius: var(--pc-pill);
+}
+.prompt-composer-apple.prompt-composer-apple button:hover:not(:disabled) {
+  color: var(--pc-text);
+  background: var(--pc-hover);
+}
+.prompt-composer-apple.prompt-composer-apple button:active:not(:disabled) {
+  background: var(--pc-raised);
+}
+.prompt-composer-apple.prompt-composer-apple button:disabled {
+  opacity: 0.5;
+}
+.prompt-composer-apple.prompt-composer-apple
+  :is(button, input, select, textarea, summary):focus-visible {
+  outline: var(--pc-focus-width) solid var(--pc-link);
+  outline-offset: var(--pc-xxs);
+}
+.prompt-composer-apple.prompt-composer-apple :is(b, strong, label) {
+  font-weight: var(--pc-semibold);
+}
+.prompt-composer-apple.prompt-composer-apple :is(h1, h2, h3) {
+  font-weight: var(--pc-bold);
+}
+.prompt-composer-apple.prompt-composer-apple :is(input, textarea)::placeholder {
+  color: var(--pc-muted);
+  opacity: 1;
+}
+.creative-composer.prompt-composer-apple .dialogue-stream {
+  --stream-speak: var(--pc-link);
+  --stream-action: var(--pc-link);
+  --stream-emote: var(--pc-link);
+}
+.creative-composer.prompt-composer-apple .prompt-heading {
+  background: var(--pc-surface);
+  padding: var(--pc-base) var(--pc-xl) var(--pc-md);
+  gap: var(--pc-sm);
+  border-bottom: var(--pc-hairline) solid var(--pc-soft-rule);
+}
+.creative-composer.prompt-composer-apple .prompt-heading-text > button {
+  font-size: var(--pc-headline);
+  font-weight: var(--pc-bold);
+  line-height: var(--pc-line);
+  color: var(--pc-text);
+}
+.creative-composer.prompt-composer-apple .composer-context,
+.creative-composer.prompt-composer-apple .composer-context > button {
+  font-size: var(--pc-micro);
+  color: var(--pc-muted);
+}
+.creative-composer.prompt-composer-apple .creative-writing {
+  padding-inline: var(--pc-xl);
+}
+.creative-composer.prompt-composer-apple :is(.stream-topbar, .stream-cast) {
+  gap: var(--pc-sm);
+}
+.creative-composer.prompt-composer-apple .stream-topbar {
+  margin-top: var(--pc-sm);
+}
+.creative-composer.prompt-composer-apple
+  :is(.stream-shots button, .stream-cast button) {
+  font-size: var(--pc-caption);
+  border-radius: var(--pc-pill);
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple
+  :is(.stream-shots, .stream-cast)
+  button[aria-pressed="true"] {
+  background: var(--pc-selected);
+  border-color: var(--pc-link);
+  color: var(--pc-text);
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple .stream-avatar {
+  background: var(--pc-raised);
+  color: var(--pc-muted);
+  font-weight: var(--pc-semibold);
+  border: var(--pc-hairline) solid var(--pc-soft-rule);
+}
+.creative-composer.prompt-composer-apple .stream-scene {
+  border-radius: var(--pc-radius-md);
+  background: var(--pc-group);
+}
+.creative-composer.prompt-composer-apple .stream-scene > summary {
+  padding: var(--pc-sm) var(--pc-md);
+  font-size: var(--pc-caption);
+  color: var(--pc-muted);
+}
+.creative-composer.prompt-composer-apple .stream-scene-body {
+  padding: var(--pc-sm) var(--pc-md) var(--pc-base);
+}
+.creative-composer.prompt-composer-apple .stream-event {
+  padding: var(--pc-md) var(--pc-base);
+  border: var(--pc-hairline) solid var(--pc-rule);
+  border-radius: var(--pc-radius-lg);
+  background: var(--pc-group);
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple .stream-event > header {
+  gap: var(--pc-sm);
+  margin-bottom: var(--pc-xs);
+}
+.creative-composer.prompt-composer-apple .stream-event > header select {
+  font-size: var(--pc-caption);
+  font-weight: var(--pc-semibold);
+  max-width: none;
+  flex: 1;
+  color: var(--pc-text);
+}
+.creative-composer.prompt-composer-apple .stream-event-type {
+  font-size: var(--pc-micro);
+  color: var(--pc-muted);
+}
+.creative-composer.prompt-composer-apple
+  :is(
+    .stream-event > textarea,
+    .stream-compose > textarea,
+    .stream-scene-body .canvas-prose
+  ) {
+  font-size: var(--pc-body);
+  font-weight: var(--pc-regular);
+  line-height: var(--pc-line);
+  color: var(--pc-text);
+}
+.creative-composer.prompt-composer-apple
+  .stream-events
+  > li[data-together="true"]
+  .stream-event {
+  border-left: var(--pc-hairline) solid var(--pc-link);
+  margin-left: var(--pc-base);
+}
+.creative-composer.prompt-composer-apple .stream-relationship {
+  font-size: var(--pc-caption);
+  color: var(--pc-muted);
+  gap: var(--pc-sm);
+}
+.creative-composer.prompt-composer-apple
+  .stream-events
+  > li[data-together="true"]
+  .stream-relationship {
+  color: var(--pc-link);
+}
+.creative-composer.prompt-composer-apple
+  :is(
+    .stream-event:focus-within,
+    .stream-events > li[data-selected="true"] .stream-event
+  ) {
+  border-color: var(--pc-link);
+}
+.creative-composer.prompt-composer-apple .stream-event-options {
+  border-top: var(--pc-hairline) solid var(--pc-soft-rule);
+  padding-top: var(--pc-md);
+  gap: var(--pc-md);
+}
+.creative-composer.prompt-composer-apple
+  .stream-event-options
+  :is(select, input) {
+  min-height: var(--pc-control);
+  font-size: var(--pc-caption);
+  background: var(--pc-raised);
+  border: var(--pc-hairline) solid var(--pc-rule);
+  border-radius: var(--pc-radius-md);
+}
+.creative-composer.prompt-composer-apple .stream-event-options label {
+  font-size: var(--pc-caption);
+}
+.creative-composer.prompt-composer-apple .stream-compose {
+  border: var(--pc-hairline) solid var(--pc-rule);
+  border-radius: var(--pc-radius-xl);
+  padding: var(--pc-md) var(--pc-base);
+  background: var(--pc-raised);
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple .stream-compose-heading {
+  color: var(--pc-muted);
+  font-size: var(--pc-caption);
+}
+.creative-composer.prompt-composer-apple .stream-compose-actions > div {
+  border-radius: var(--pc-pill);
+  background: var(--pc-group);
+  padding: var(--pc-xxs);
+  gap: var(--pc-xxs);
+}
+.creative-composer.prompt-composer-apple .stream-compose-actions button {
+  font-size: var(--pc-caption);
+  border-radius: var(--pc-pill);
+}
+.creative-composer.prompt-composer-apple
+  .stream-compose-actions
+  button[aria-pressed="true"] {
+  background: var(--pc-primary);
+  color: var(--pc-text);
+  border-color: transparent;
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple .stream-compose-actions .stream-send,
+.creative-composer.prompt-composer-apple .creative-generate {
+  background: var(--pc-primary);
+  color: var(--pc-text);
+  border: 0;
+  border-radius: var(--pc-pill);
+  box-shadow: none;
+  font-weight: var(--pc-regular);
+}
+.creative-composer.prompt-composer-apple
+  :is(.stream-send, .creative-generate):hover:not(:disabled) {
+  background: var(--pc-focus);
+  color: var(--pc-text);
+}
+.creative-composer.prompt-composer-apple .creative-generate {
+  font-size: var(--pc-callout);
+  padding-inline: var(--pc-base);
+}
+.creative-composer.prompt-composer-apple .creative-generate small {
+  font-weight: var(--pc-regular);
+}
+.creative-composer.prompt-composer-apple .creative-footer {
+  padding: var(--pc-sm) var(--pc-xl) var(--pc-md);
+  background: var(--pc-surface);
+  border-top: var(--pc-hairline) solid var(--pc-soft-rule);
+}
+.creative-composer.prompt-composer-apple
+  :is(.creative-specs, .composer-settings-panel) {
+  background: var(--pc-raised);
+  border-radius: var(--pc-radius-md);
+  color: var(--pc-muted);
+  box-shadow: none;
+}
+.creative-composer.prompt-composer-apple .stream-clip-settings {
+  padding-inline: var(--pc-xl);
+}
+.creative-composer.prompt-composer-apple .stream-clip-settings > summary {
+  font-size: var(--pc-caption);
+}
+.creative-composer.prompt-composer-apple .creative-frame {
+  border: var(--pc-hairline) solid var(--pc-rule);
+  background: var(--pc-group);
+  border-radius: var(--pc-radius-md);
+  color: var(--pc-muted);
+}
+.creative-composer.prompt-composer-apple .creative-duration {
+  color: var(--pc-link);
+  font-weight: var(--pc-semibold);
+}
+.creative-composer.prompt-composer-apple .stream-empty h3 {
+  font-size: var(--pc-headline);
+  font-weight: var(--pc-bold);
+}
+.creative-composer.prompt-composer-apple .stream-empty p {
+  font-size: var(--pc-callout);
+}
+.creative-composer.prompt-composer-apple .stream-compose:focus-within {
+  outline: var(--pc-focus-width) solid var(--pc-link);
+  outline-offset: var(--pc-xxs);
+}
+.creative-composer.prompt-composer-apple
+  .stream-compose
+  > textarea:focus-visible {
+  outline: none;
+}
+.composer-companion.prompt-composer-apple {
+  border: var(--pc-hairline) solid var(--pc-rule);
+  border-radius: var(--pc-radius-lg);
+  background: var(--pc-raised);
+  box-shadow: none;
+}
+.composer-companion.prompt-composer-apple > header {
+  border-bottom: var(--pc-hairline) solid var(--pc-rule);
+  font-size: var(--pc-callout);
+}
+.composer-companion.prompt-composer-apple
+  :is(.asset-pill, .model-choice, .composer-panel-tabs button) {
+  border-radius: var(--pc-radius-md);
+  box-shadow: none;
+}
+/* CSS continuous corners are progressive enhancement; scale radii are the fallback. */
+@supports (corner-shape: squircle) {
+  .prompt-composer-apple
+    :is(
+      .stream-event,
+      .stream-compose,
+      .stream-scene,
+      .event,
+      .compose,
+      .popover,
+      .frame
+    ) {
+    corner-shape: squircle;
+  }
+}
+@container (max-width: 420px) {
+  .creative-composer.prompt-composer-apple
+    :is(
+      .creative-writing,
+      .prompt-heading,
+      .creative-footer,
+      .stream-clip-settings
+    ) {
+    padding-inline: var(--pc-base);
+  }
+  .creative-composer.prompt-composer-apple :is(.stream-event, .stream-compose) {
+    padding-inline: var(--pc-md);
+  }
+  .creative-composer.prompt-composer-apple .creative-generate {
+    font-size: var(--pc-caption);
+    padding-inline: var(--pc-md);
+  }
+  .creative-composer.prompt-composer-apple .stream-compose-actions button {
+    padding-inline: var(--pc-sm);
+  }
+}
+@media (pointer: coarse) {
+  .creative-composer.prompt-composer-apple .dialogue-stream :is(button, select),
+  .composer-companion.prompt-composer-apple button {
+    min-height: var(--pc-touch);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-composer-apple.prompt-composer-apple *,
+  .prompt-composer-apple.prompt-composer-apple *::before,
+  .prompt-composer-apple.prompt-composer-apple *::after {
+    transition: none;
+    animation: none;
+  }
+}
+/* Let short composer panels scroll instead of clipping the pinned input. */
+.creative-composer.dialogue-first.prompt-composer-apple .creative-writing {
+  overflow-y: auto;
+}
+.creative-composer.dialogue-first.prompt-composer-apple .dialogue-stream {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+.creative-composer.prompt-composer-apple .stream-event > textarea {
+  border-radius: var(--pc-radius-sm);
+}

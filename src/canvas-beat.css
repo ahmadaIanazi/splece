@@ -1,0 +1,31 @@
+/* Small additions to the existing canvas; its colors, spacing and chrome stay. */
+.creative-composer .canvas-beat-heading .canvas-remove-shot {
+  opacity: 0.7;
+}
+.creative-composer .canvas-moment .canvas-prose {
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 29px;
+  padding: 3px 0;
+}
+.creative-composer .canvas-moment .canvas-dialogue-heading {
+  flex-wrap: wrap;
+}
+.creative-composer .canvas-moment-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: -6px 0 -6px 9px;
+  color: #8191a7;
+  font-size: 11px;
+}
+.creative-composer .canvas-moment-link button {
+  font-size: 11px;
+  min-height: 26px;
+  padding: 2px 4px;
+  gap: 4px;
+  background: transparent;
+}
+.creative-composer .canvas-moment-link button[aria-pressed="true"] {
+  color: var(--accent-active, #8db9fb);
+}

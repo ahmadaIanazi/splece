@@ -1,0 +1,32 @@
+.editor-shell .screen-area.preview-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100vw;
+  height: 100vh;
+  padding: 16px 16px 64px;
+  background: #000;
+  container-type: size;
+}
+.preview-fullscreen-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #171c25ed;
+  color: #fff;
+}
+.preview-fullscreen-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  white-space: nowrap;
+}
+.preview-fullscreen-controls span { white-space: nowrap; font-variant-numeric: tabular-nums; }

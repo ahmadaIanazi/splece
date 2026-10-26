@@ -1,0 +1,184 @@
+.story-guide-label[aria-current] {
+  opacity: 1;
+  text-shadow: 0 0 14px var(--story-kind-color);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.story-guide-label:focus-visible {
+  outline: 1px solid var(--story-kind-color, #80aff5);
+  outline-offset: 3px;
+}
+.editor-without-sidebar .prompt-pane {
+  border-left: 0;
+  min-width: 310px;
+}
+.editor-without-sidebar .prompt-heading {
+  box-shadow: none;
+  border-bottom: 0;
+  padding-top: 12px;
+}
+.editor-without-sidebar .prompt-heading-text > small {
+  color: var(--story-kind-color, #a8bddb);
+}
+.editor-without-sidebar .prompt-pane[data-group="true"] {
+  display: flex;
+}
+.group-composer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+.group-composer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 10px;
+  gap: 12px;
+}
+.group-composer-heading small {
+  color: var(--story-kind-color);
+  font-size: 10px;
+}
+.group-composer-heading h2 {
+  font-size: 18px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.group-composer-heading h2 svg {
+  color: var(--story-kind-color);
+  flex: none;
+}
+.group-composer-heading button {
+  background: none;
+  border: 0;
+}
+.group-composer-body {
+  overflow: auto;
+  padding: 10px 24px 24px;
+}
+.group-composer-body .field {
+  margin-bottom: 20px;
+}
+.group-composer-body input,
+.group-composer-body textarea {
+  border-color: transparent;
+  background: #11151c66;
+}
+.group-composer-body input:focus,
+.group-composer-body textarea:focus {
+  border-color: var(--story-kind-color);
+}
+.group-hint {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #94a2b6;
+}
+.group-children-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 12px;
+}
+.group-children-heading > span {
+  flex: 1;
+  font-size: 11px;
+  color: #8e9bad;
+}
+.group-children-heading button,
+.group-back {
+  background: none;
+  border: 0;
+  font-size: 12px;
+}
+.group-children {
+  display: grid;
+  gap: 5px;
+}
+.group-children > button {
+  border: 0;
+  background: none;
+  display: flex;
+  text-align: left;
+  gap: 12px;
+  padding: 9px 0;
+  width: 100%;
+}
+.group-children > button:hover {
+  background: #ffffff05;
+}
+.group-child-image {
+  width: 64px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: #121821;
+  border-radius: 6px;
+  color: var(--story-kind-color);
+  overflow: hidden;
+  flex: none;
+}
+.group-child-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.group-children > button > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+}
+.group-children small {
+  font-size: 10px;
+  color: #93a1b5;
+}
+.group-children small:first-child {
+  color: var(--story-kind-color);
+}
+.group-children b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.group-back {
+  margin-top: 20px;
+}
+.structure-add-root {
+  display: flex;
+  gap: 6px;
+  padding: 0 8px;
+}
+.structure-add-root .roadmap-add {
+  flex: 1;
+  margin: 5px 0;
+}
+.roadmap-link svg {
+  color: var(--story-kind-color, #80aff5);
+}
+.roadmap-link .rail-label small {
+  color: var(--story-kind-color, #93a4bc);
+}
+.composer-context {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.prompt-heading .composer-context button {
+  font-size: 10px;
+  font-weight: 400;
+  padding: 2px 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+.prompt-heading .composer-context button:hover {
+  color: #edf4ff;
+}
+.composer-context > svg {
+  flex: none;
+}

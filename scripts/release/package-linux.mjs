@@ -1,0 +1,34 @@
+import {bundleFFmpeg} from './bundle-ffmpeg.mjs';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+const exec=promisify(execFile),root=process.cwd();
+if(process.platform!=='linux'||process.arch!=='x64'||!process.release.lts)throw Error('Build Linux x64 with official Node LTS.');
+const pkg=JSON.parse(await fs.readFile('package.json'));
+const stage=path.join(root,'release/linux-deb'),base=path.join(stage,'opt/splece'),studio=path.join(base,'studio');
+await fs.rm(stage,{recursive:true,force:true});await fs.mkdir(studio,{recursive:true});
+for(const name of ['dist','server','shared','package.json','package-lock.json'])await fs.cp(path.join(root,name),path.join(studio,name),{recursive:true});
+await fs.rm(path.join(studio,'dist/downloads'),{recursive:true,force:true});
+for(const name of ['scripts/studio-launcher.mjs','scripts/release/bundled-launcher.mjs']){await fs.mkdir(path.dirname(path.join(studio,name)),{recursive:true});await fs.copyFile(path.join(root,name),path.join(studio,name));}
+await exec(process.execPath,[process.env.npm_execpath,'ci','--omit=dev','--no-audit','--no-fund'],{cwd:studio,timeout:180000,maxBuffer:2e6});
+await bundleFFmpeg(root,studio);
+for(const name of ['LICENSE','NOTICE','TRADEMARKS.md','ATTRIBUTION.md','THIRD_PARTY_NOTICES.md'])await fs.copyFile(path.join(root,name),path.join(studio,name));
+await exec(process.execPath,[path.join(root,'scripts/release/license-inventory.mjs'),path.join(studio,'third-party')],{cwd:root,timeout:30000,maxBuffer:2e6});
+for(const name of ['vite','esbuild','@esbuild','rollup','@rollup','.bin'])await fs.rm(path.join(studio,'node_modules',name),{recursive:true,force:true});
+await fs.mkdir(path.join(base,'runtime'));await fs.copyFile(process.execPath,path.join(base,'runtime/node'));await fs.chmod(path.join(base,'runtime/node'),0o755);
+await fs.copyFile(path.resolve(path.dirname(process.execPath),'../LICENSE'),path.join(base,'runtime/LICENSE'));
+await fs.writeFile(path.join(base,'open.mjs'),`import {launchPackaged} from './studio/scripts/release/bundled-launcher.mjs';
+import {spawn} from 'node:child_process';import {fileURLToPath} from 'node:url';
+try{const result=await launchPackaged({root:fileURLToPath(new URL('./studio',import.meta.url))});const browser=spawn('/usr/bin/xdg-open',[result.url],{stdio:'ignore'});browser.on('error',()=>process.exitCode=1);}catch(error){console.error(error.message);const dialog=spawn('/usr/bin/zenity',['--error','--title=Splece','--text='+error.message],{stdio:'ignore'});dialog.on('error',()=>{});process.exitCode=1;}
+`);
+await fs.mkdir(path.join(stage,'usr/bin'),{recursive:true});
+await fs.writeFile(path.join(stage,'usr/bin/splece'),'#!/bin/sh\nunset NODE_OPTIONS NODE_PATH PORT STUDIO_DATA_DIR\nexec /opt/splece/runtime/node /opt/splece/open.mjs "$@"\n',{mode:0o755});
+await fs.mkdir(path.join(stage,'usr/share/applications'),{recursive:true});
+await fs.writeFile(path.join(stage,'usr/share/applications/splece.desktop'),'[Desktop Entry]\nType=Application\nName=Splece\nComment=Local AI video studio\nExec=/usr/bin/splece\nIcon=splece\nTerminal=false\nCategories=AudioVideo;Video;\nStartupNotify=false\n');
+await fs.mkdir(path.join(stage,'usr/share/icons/hicolor/scalable/apps'),{recursive:true});await fs.copyFile('public/splece.svg',path.join(stage,'usr/share/icons/hicolor/scalable/apps/splece.svg'));
+await fs.mkdir(path.join(stage,'DEBIAN'));
+await fs.writeFile(path.join(stage,'DEBIAN/control'),`Package: splece\nVersion: ${pkg.version}\nSection: video\nPriority: optional\nArchitecture: amd64\nMaintainer: Splece\nDepends: libc6 (>= 2.35), libstdc++6, xdg-utils\nHomepage: https://www.splece.com\nDescription: Local AI video studio (beta)\n Bundled browser editor, Node runtime and video tools.\n Projects remain in the user's data directory.\n`);
+await fs.mkdir(path.join(root,'release/linux-beta'),{recursive:true});
+const out=path.join(root,`release/linux-beta/Splece-${pkg.version}-beta-amd64.deb`);
+await exec('dpkg-deb',['--build','--root-owner-group',stage,out],{timeout:180000});console.log(out);

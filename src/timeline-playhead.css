@@ -1,0 +1,33 @@
+.ruler > .playhead { top: 0; bottom: 0; background: transparent; }
+.ruler .playhead > .playhead-grip {
+  position: absolute;
+  top: -5px;
+  left: -12px;
+  width: 25px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.playhead-grip > i {
+  display: block;
+  margin: auto;
+  width: 11px;
+  height: 13px;
+  background: var(--category-timing, #8bb8fc);
+  clip-path: polygon(50% 0, 100% 35%, 100% 100%, 0 100%, 0 35%);
+  transition: filter 120ms, transform 120ms;
+}
+.playhead-grip:hover > i,
+.playhead-grip:focus-visible > i {
+  filter: brightness(1.3);
+  transform: scale(1.15);
+}
+.playhead-grip:focus-visible { outline: 2px solid var(--category-timing, #8bb8fc); }
+.timeline-scroll.timeline-scrubbing,
+.timeline-scroll.timeline-scrubbing * { cursor: grabbing !important; user-select: none; }
+.playhead.is-scrubbing { box-shadow: 0 0 7px var(--category-timing, #8bb8fc); }

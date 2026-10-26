@@ -1,0 +1,18 @@
+.folder-settings{max-width:720px;display:grid;gap:18px;text-align:left}
+.folder-settings header{display:flex;gap:12px;align-items:center}
+.folder-settings h3,.folder-settings p{margin:0}
+.folder-settings h3{font-size:19px;letter-spacing:-.025em}
+.folder-settings p,.folder-settings small{font-size:12px;line-height:1.6;color:var(--muted)}
+.folder-card{display:grid;gap:12px;padding:20px;border-radius:16px;background:var(--panel);border:1px solid var(--border)}
+.folder-card strong{font-size:13px}
+.folder-input,.folder-actions,.folder-storage{display:flex;gap:10px;align-items:center}
+.folder-input input{min-width:0;flex:1;font-size:12px}
+.folder-settings button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;white-space:nowrap}
+.folder-actions{flex-wrap:wrap}
+.folder-path{font-size:12px;color:var(--muted);overflow-wrap:anywhere;line-height:1.6}
+.folder-storage{justify-content:space-between;margin-top:16px}
+.folder-card summary{cursor:pointer;font-size:13px}
+.folder-card[open]>p{margin-top:12px}
+.folder-status{min-height:20px}
+.folder-settings .folder-error{color:var(--danger,#e88989)}
+@media(max-width:600px){.folder-input{flex-wrap:wrap}.folder-input input{flex-basis:100%}.folder-card{padding:16px}}

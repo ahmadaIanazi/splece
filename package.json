@@ -1,0 +1,44 @@
+{
+  "name": "local-video-studio",
+  "version": "0.1.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.mjs",
+    "build": "vite build",
+    "build:website": "node scripts/website/build.mjs",
+    "start": "NODE_ENV=production node server/index.mjs",
+    "studio": "node scripts/studio-launcher.mjs open",
+    "install:macos": "node scripts/install-macos.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "setup:demo": "node scripts/setup-demo.mjs",
+    "format": "prettier --write src server tests scripts",
+    "release:source": "node scripts/release/source.mjs",
+    "release:package": "node scripts/release/package.mjs",
+    "predev": "node scripts/prepare-vision.mjs",
+    "prebuild": "node scripts/prepare-vision.mjs",
+    "release:mac-beta": "node scripts/release/prepare-mac-beta.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
+    "@react-three/fiber": "^9.8.2",
+    "@resvg/resvg-js": "^2.6.2",
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "multer": "^2.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.186.1",
+    "vite": "^7.1.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "ffmpeg-static": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "Apache-2.0",
+  "author": "Ahmad Alanazi",
+  "homepage": "https://www.splece.com"
+}

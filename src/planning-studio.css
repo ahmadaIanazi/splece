@@ -1,0 +1,614 @@
+.planning-studio {
+  display: grid;
+  grid-template-columns: minmax(300px, 33%) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-canvas, #090b0e);
+  color: var(--text-primary, #eef1f7);
+}
+.planning-studio button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border-radius: 12px;
+}
+.planning-studio button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.planning-studio button:focus-visible,
+.planning-studio textarea:focus-visible {
+  outline: 2px solid var(--accent, #8ab7fb);
+  outline-offset: 3px;
+}
+.planning-studio p {
+  line-height: 1.6;
+}
+.planning-studio small,
+.planning-eyebrow {
+  color: var(--text-secondary, #919aaa);
+}
+.planning-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+}
+.planning-studio h2 {
+  font-size: 21px;
+  letter-spacing: -0.04em;
+  margin: 4px 0;
+}
+.planning-studio h3 {
+  font-size: 20px;
+  letter-spacing: -0.025em;
+}
+.planning-setup {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-panel, #14171c);
+  border-radius: 0 24px 24px 0;
+  overflow: hidden;
+}
+.planning-setup > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 22px 12px;
+  gap: 8px;
+}
+.planning-setup > header > div:last-child {
+  display: flex;
+  gap: 2px;
+}
+.planning-setup header button {
+  background: transparent;
+  border: 0;
+  width: 36px;
+  padding: 0;
+}
+.planning-conversation {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 22px 20px;
+  scrollbar-width: none;
+}
+.planning-conversation::-webkit-scrollbar,
+.planning-board::-webkit-scrollbar {
+  display: none;
+}
+.planning-recipe {
+  font-size: 12px;
+  padding: 8px 0 18px;
+  color: var(--text-secondary, #919aaa);
+}
+.planning-recipe summary {
+  cursor: pointer;
+  color: var(--text-primary, #eef1f7);
+}
+.planning-recipe p {
+  white-space: pre-wrap;
+}
+.planning-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary, #919aaa);
+  margin-bottom: 8px;
+}
+.planning-section-label button {
+  border: 0;
+  background: transparent;
+}
+.planning-reference {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border-radius: 16px;
+  margin: 8px 0;
+  padding: 10px;
+}
+.planning-reference > div {
+  min-width: 0;
+  flex: 1;
+}
+.planning-reference strong {
+  font-size: 12px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planning-reference small {
+  font-size: 10px;
+  display: block;
+  margin-top: 4px;
+}
+.planning-reference .reference-avatar {
+  width: 44px;
+  height: 50px;
+  padding: 0;
+  flex: none;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+}
+.reference-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.planning-reference .reference-action {
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  padding: 6px;
+}
+.planning-welcome {
+  padding: 22px 0;
+}
+.planning-welcome > svg {
+  color: var(--accent, #8ab7fb);
+}
+.planning-welcome p {
+  font-size: 13px;
+  color: var(--text-secondary, #919aaa);
+  max-width: 34ch;
+}
+.planning-message {
+  padding: 15px 0;
+}
+.planning-message small {
+  font-size: 10px;
+}
+.planning-message p {
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 6px 0;
+}
+.planning-message.user {
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 16px;
+  margin: 10px 0;
+}
+.planning-thinking {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary, #919aaa);
+  padding: 16px 0;
+}
+.planning-thinking svg,
+.planning-send:disabled svg {
+  animation: planning-spin 1.4s linear infinite;
+}
+.planning-recovery {
+  font-size: 11px;
+  color: #e9bb78;
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+.planning-chat-input {
+  margin: 0 16px 16px;
+  background: var(--surface-canvas, #090b0e);
+  padding: 10px;
+  border-radius: 20px;
+  flex: none;
+}
+.planning-chat-input textarea {
+  resize: none;
+  width: 100%;
+  min-height: 80px;
+  max-height: 180px;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  font: inherit;
+  font-size: 13px;
+  padding: 10px;
+  color: inherit;
+}
+.planning-chat-input > div:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.planning-chat-input small {
+  font-size: 10px;
+}
+.planning-chat-input button {
+  border: 0;
+  background: transparent;
+  min-width: 38px;
+}
+.planning-chat-input .planning-send {
+  background: var(--accent, #8ab7fb);
+  color: #09121e;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+.planning-focus {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  padding-left: 8px;
+  color: var(--text-secondary, #919aaa);
+}
+.planning-focus strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planning-focus button {
+  margin-left: auto;
+}
+.planning-suggestions {
+  display: flex;
+  gap: 6px;
+  overflow: auto;
+  padding: 6px;
+}
+.planning-suggestions button {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px 10px;
+  flex: none;
+  max-width: 210px;
+  text-align: left;
+}
+.planning-board-area {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.planning-board-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 30px 18px;
+}
+.planning-board-heading > div:last-child {
+  display: flex;
+  gap: 4px;
+}
+.planning-board-heading button {
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  padding: 8px;
+}
+.planning-board-heading h2 {
+  font-size: 18px;
+  max-width: 48ch;
+}
+.planning-board {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+  cursor: grab;
+  padding: 0 30px 60px;
+  touch-action: pan-x pan-y;
+}
+.planning-board:active {
+  cursor: grabbing;
+}
+.planning-columns {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  min-height: 100%;
+  align-items: flex-start;
+}
+.planning-column {
+  width: var(--card-width);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.planning-ruler {
+  height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--text-secondary, #919aaa);
+  background: repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(10% - 1px),
+      #353b43 calc(10% - 1px),
+      #353b43 10%
+    )
+    bottom/100% 8px no-repeat;
+  margin-bottom: 12px;
+}
+.planning-card {
+  background: var(--surface-panel, #14171c);
+  border-radius: 20px;
+  padding: 20px;
+  cursor: default;
+  box-shadow: 0 0 0 1px transparent;
+  transition:
+    box-shadow 0.18s,
+    background 0.18s;
+  margin-left: calc(max(0, var(--depth) - 1) * 10px);
+}
+.planning-card.is-selected {
+  box-shadow: 0 0 0 1px var(--accent, #8ab7fb);
+  background: color-mix(
+    in srgb,
+    var(--surface-panel, #14171c) 94%,
+    var(--accent, #8ab7fb)
+  );
+}
+.planning-card.planning-scene-card {
+  background: var(--surface-raised, #1c2027);
+  min-height: 240px;
+  padding: 24px;
+}
+.planning-card .planning-card-title {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 0;
+  gap: 8px;
+}
+.planning-card-title > span {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.planning-scene-card .planning-card-title > span {
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+.planning-card-title small {
+  font-size: 10px;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.planning-card p {
+  font-size: 12px;
+  color: var(--muted, #a4adbb);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 14px 0 22px;
+}
+.planning-card blockquote {
+  font-size: 12px;
+  margin: 8px 0;
+  color: var(--text, #e5eaf1);
+}
+.planning-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 9px;
+  color: var(--text-secondary, #919aaa);
+}
+.planning-card .planning-create {
+  font-size: 11px;
+  background: rgba(139, 181, 244, 0.12);
+  border: 0;
+  color: var(--accent, #8ab7fb);
+  padding: 7px 10px;
+}
+.planning-faces {
+  display: flex;
+  gap: 5px;
+}
+.planning-faces button {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0;
+  overflow: hidden;
+  font-size: 11px;
+}
+.planning-faces img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.planning-add-scene {
+  margin-top: 56px;
+  flex: none;
+  width: 64px;
+  height: 100px;
+  border: 1px dashed #343b45;
+  background: transparent;
+  color: var(--text-secondary, #919aaa);
+}
+.planning-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 80%;
+  cursor: default;
+}
+.planning-empty h3 {
+  margin: 30px 0 8px;
+}
+.planning-empty p {
+  font-size: 13px;
+  color: var(--text-secondary, #919aaa);
+}
+.planning-empty button {
+  border: 0;
+  background: transparent;
+  color: var(--accent, #8ab7fb);
+  margin-top: 14px;
+  font-size: 12px;
+}
+.planning-ghosts {
+  display: flex;
+  gap: 10px;
+  transform: rotate(-3deg);
+}
+.planning-ghosts span {
+  width: 75px;
+  height: 100px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #222832, #12151a);
+}
+.planning-ghosts span:nth-child(2) {
+  transform: translateY(-12px);
+}
+.planning-ghosts span:last-child {
+  opacity: 0.45;
+}
+.setup-collapsed {
+  grid-template-columns: 1fr;
+}
+.setup-collapsed .planning-setup {
+  display: none;
+}
+.planning-clip-composer {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 4px 24px 24px;
+}
+.planning-clip-composer > .creative-composer {
+  height: 100%;
+  min-height: 0;
+  max-width: 850px;
+  margin: auto;
+}
+.planning-clip-composer .creative-composer-body {
+  min-height: 0;
+}
+@keyframes planning-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 900px) {
+  .planning-studio {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .planning-board-heading {
+    padding: 18px;
+  }
+  .planning-board {
+    padding-inline: 18px;
+  }
+  .planning-board-heading h2 {
+    font-size: 15px;
+  }
+  .setup-collapsed {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 650px) {
+  .planning-studio {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+  .planning-setup {
+    min-height: 380px;
+    max-height: 50vh;
+    border-radius: 0 0 20px 20px;
+    flex: none;
+  }
+  .planning-board-area {
+    min-height: 500px;
+    flex: 1;
+  }
+  .planning-setup > header {
+    padding: 12px 18px;
+  }
+  .planning-conversation {
+    padding: 4px 18px;
+  }
+  .planning-reference {
+    padding: 7px;
+  }
+  .planning-chat-input {
+    margin-bottom: 10px;
+  }
+  .planning-chat-input textarea {
+    min-height: 60px;
+  }
+  .planning-board-heading {
+    padding: 18px;
+  }
+  .setup-collapsed .planning-board-area {
+    min-height: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .planning-studio * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.planning-footage {
+  width: 100%;
+  max-height: 190px;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-top: 12px;
+  background: #090b0e;
+}
+.planning-job {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  margin-top: 12px;
+  color: var(--text-secondary);
+}
+
+.planning-studio .planning-poster {
+  width: 100%;
+  height: 160px;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin-top: 12px;
+  background: #090b0e;
+}
+.planning-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+.planning-poster svg {
+  position: absolute;
+  color: white;
+  filter: drop-shadow(0 1px 4px #000);
+}

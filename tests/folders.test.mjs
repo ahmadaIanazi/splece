@@ -1,0 +1,45 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import {createFolderSettings, folderPath, installFolderRoutes} from "../server/folders.mjs";
+test("project folder preferences persist and invalid locations preserve the last choice", async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),"splece-folders-"));
+ t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const folder=path.join(root,"My projects");await fs.mkdir(folder);
+ const canonical=await fs.realpath(folder);
+ const settings=await createFolderSettings(root);
+ await settings.save(folder);
+ assert.equal((await createFolderSettings(root)).get().projectsRoot,canonical);
+ await assert.rejects(settings.save("relative"),/full folder path/);
+ await assert.rejects(settings.save(path.join(root,"missing")),/unavailable/);
+ await fs.writeFile(path.join(root,"file"),"x");
+ await assert.rejects(folderPath(path.join(root,"file")),/not a file/);
+ assert.equal(settings.get().projectsRoot,canonical);
+ await fs.rm(folder,{recursive:true});
+ await assert.rejects(settings.writable(),/unavailable/);
+ assert.equal(settings.get().projectsRoot,canonical);
+});
+test("corrupt preferences do not stop the app or silently allow project creation",async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),"splece-folders-"));
+ t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ await fs.writeFile(path.join(root,"folder-settings.json"),"{broken");
+ const settings=await createFolderSettings(root);
+ assert.ok(settings.get().warning);
+ await assert.rejects(settings.writable(),/could not be read/);
+ await settings.save(root);
+ assert.equal(settings.get().warning,"");
+});
+test("folder reveal only accepts known locations and validates project ownership",async t=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),"splece-folders-"));
+ t.after(()=>fs.rm(root,{recursive:true,force:true}));
+ const routes={},app={get:(p,h)=>routes[p]=h,put:()=>{},post:(p,h)=>routes[p]=h};
+ let revealed;
+ installFolderRoutes(app,{data:root,folders:await createFolderSettings(root),store:{get:id=>id==="known"?{project:{folder:root}}:null},reveal:async value=>{revealed=value}});
+ const handler=routes["/api/studio/folders/reveal"],res={json:()=>{}};
+ await handler({body:{target:"media",projectId:"known"}},res);
+ assert.equal(revealed,path.join(root,"media"));
+ await assert.rejects(handler({body:{target:"/etc"}},res),/available folder/);
+ await assert.rejects(handler({body:{target:"media",projectId:"missing"}},res),/not be found/);
+});

@@ -1,0 +1,7 @@
+{
+  "feedURL": "https://www.splece.com/updates/beta/macos-arm64.xml",
+  "publicKey": "XgndcUeoTX6gAR20uxSdzmhcRgUzvLtslhkoRwRI+VM=",
+  "keychainAccount": "app.splece.studio.updates",
+  "sparkleVersion": "2.10.1",
+  "sparkleSha256": "1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27"
+}

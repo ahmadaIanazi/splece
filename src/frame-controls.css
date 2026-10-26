@@ -1,0 +1,248 @@
+.boundary-controls.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.boundary-picker {
+  min-width: 0;
+}
+.boundary-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 14px;
+  border-radius: 12px;
+  background: var(--surface-panel, #1a1c23);
+}
+.boundary-picker .boundary-tabs button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.boundary-picker .boundary-tabs button[aria-selected="true"] {
+  color: var(--text-primary);
+  background: var(--surface-raised, #2a2c34);
+  box-shadow: 0 2px 8px #0002;
+}
+.boundary-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 190px;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface-sunken, #0d0e12);
+  border: 1px dashed var(--border-subtle, #3c3e47);
+}
+.boundary-stage.has-frame {
+  border-style: solid;
+}
+.boundary-stage > img {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: contain;
+}
+.boundary-empty-icon {
+  color: var(--text-tertiary, #777b89);
+  margin-bottom: 26px;
+}
+.boundary-stage button.boundary-corner {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  top: 10px;
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  color: #e4e5ed;
+  border-radius: 9px;
+  background: #11141bbd;
+  backdrop-filter: blur(12px);
+}
+.boundary-reset {
+  left: 10px;
+}
+.boundary-remove {
+  right: 10px;
+}
+.boundary-stage button.boundary-adjacent {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid #ffffff15;
+  background: #171b24d9;
+  backdrop-filter: blur(16px);
+  color: #e4e6ed;
+  font-size: 12px;
+  padding: 9px;
+}
+.boundary-stage button.boundary-adjacent:disabled {
+  opacity: 0.45;
+}
+.boundary-stage button:not(:disabled):hover {
+  background: var(--selection-fill, #303948);
+}
+.boundary-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 5px;
+}
+.boundary-picker .boundary-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  font-size: 11px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.boundary-picker .boundary-tools button:not(:disabled):hover {
+  background: var(--surface-raised, #262930);
+  color: var(--text-primary);
+}
+.boundary-source {
+  margin-left: auto;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary, #8a8e9b);
+}
+.boundary-timeline-picker {
+  margin-top: 14px;
+}
+.boundary-timeline-picker summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.boundary-timeline-picker summary::-webkit-details-marker {
+  display: none;
+}
+.boundary-timeline-picker summary > svg {
+  transition: transform 0.15s ease;
+  transform: rotate(-90deg);
+}
+.boundary-timeline-picker[open] summary > svg {
+  transform: rotate(0);
+}
+.boundary-source-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  max-height: 210px;
+  overflow: auto;
+  margin-top: 12px;
+  scrollbar-width: none;
+}
+.boundary-picker .boundary-source-grid > button {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 16 / 11;
+  padding: 0;
+  border: 2px solid transparent;
+  background: var(--surface-sunken, #101218);
+  overflow: hidden;
+  border-radius: 8px;
+}
+.boundary-picker .boundary-source-grid > button[aria-pressed="true"] {
+  border-color: var(--accent, #8db9fb);
+}
+.boundary-source-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.boundary-source-grid span {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  color: white;
+  font-size: 9px;
+  text-shadow: 0 1px 5px black;
+}
+.boundary-scrubber {
+  display: block;
+  margin-top: 14px;
+}
+.boundary-scrubber > span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.boundary-scrubber input {
+  width: 100%;
+  accent-color: var(--accent, #8db9fb);
+  margin-top: 9px;
+}
+.boundary-guidance {
+  display: block;
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--text-tertiary, #7e8392);
+}
+.boundary-picker button:focus-visible,
+.boundary-picker summary:focus-visible {
+  outline: 2px solid var(--accent, #8db9fb);
+  outline-offset: 3px;
+}
+@media (max-width: 560px) {
+  .boundary-controls.pair {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boundary-timeline-picker summary > svg {
+    transition: none;
+  }
+}
+
+/* Keep the source switch reachable while longer generation forms scroll. */
+.composer-companion .boundary-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-shadow: 0 -12px 0 0 var(--surface-panel, #1a1c23);
+}
+.composer-companion .companion-body:has(.boundary-picker) {
+  scrollbar-width: none;
+  scroll-behavior: auto;
+}
+.composer-companion .companion-body:has(.boundary-picker)::-webkit-scrollbar {
+  display: none;
+}
+@media (max-height: 760px) {
+  .boundary-stage {
+    min-height: 160px;
+    aspect-ratio: 16 / 9;
+  }
+}

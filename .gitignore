@@ -1,0 +1,47 @@
+# Dependencies and generated builds
+node_modules/
+/dist/
+/release/
+/public/downloads/
+/coverage/
+*.tsbuildinfo
+
+# Local studio state, projects, provider credentials, and logs
+/data/
+/.studio-launcher/
+**/.frame/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+credentials.json
+*-credentials.json
+*.log
+
+# Environment secrets and signing material (examples must contain placeholders only)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+/secrets/
+
+# Local evidence, experiments, exports and caches
+/artifacts/
+/design/logo-explorations/
+/design/brand/
+/tmp/
+/temp/
+.cache/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+/public/vision/wasm/
+
+/public/vision/face-worker.js

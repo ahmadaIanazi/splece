@@ -1,0 +1,115 @@
+/* View navigation is outside the scrollable time canvas. */
+.editor-shell .timeline-panel[data-timeline-view] .sound-timeline {
+  max-height: none;
+  overflow: visible;
+}
+.editor-shell .timeline-mode-rail {
+  position: absolute;
+  z-index: 12;
+  top: 12px;
+  bottom: 54px;
+  left: 4px;
+  width: 56px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.editor-shell .timeline-panel[data-timeline-view] .timeline-edit-rail {
+  left: auto;
+  right: 6px;
+}
+.editor-shell .timeline-panel[data-timeline-view] .timeline-body {
+  margin-left: 68px;
+  margin-right: 48px;
+}
+.editor-shell .timeline-view-direction .timeline-edit-rail {
+  display: none;
+}
+.editor-shell .timeline-panel[data-timeline-view="direction"] .timeline-body {
+  margin-right: 16px;
+}
+.editor-shell
+  .timeline-panel[data-timeline-view]
+  .remark-lane:not(:has(.remark)) {
+  display: none;
+}
+.editor-shell .timeline-view-video .clip-source-wave {
+  display: none;
+}
+.editor-shell
+  .timeline-view-all
+  .soundtrack-timeline[data-expanded="true"]
+  .soundtrack-wave {
+  display: none;
+}
+.editor-shell
+  .timeline-view-all
+  .soundtrack-timeline[data-expanded="true"]:not(:has(.soundtrack-progress)) {
+  height: 22px;
+  min-height: 22px;
+}
+.editor-shell .timeline-view-all .sound-track {
+  height: 32px;
+}
+.editor-shell .timeline-view-all .sound-clip {
+  height: 20px;
+}
+.editor-shell .timeline-view-direction .timeline-content {
+  min-height: 100%;
+}
+.editor-shell .timeline-view-direction .direction-timeline {
+  z-index: 7;
+}
+.editor-shell .timeline-view-direction .timeline-guides {
+  margin-bottom: 12px;
+}
+.editor-shell .timeline-view-direction .timeline-content > .ruler {
+  margin-top: auto;
+}
+.editor-shell.assets-expanded .timeline-mode-rail {
+  bottom: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .timeline-mode-rail button {
+    transition:
+      color 140ms,
+      background 140ms;
+  }
+}
+
+.editor-shell
+  .timeline-view-direction
+  .timeline-guides:not(:has(.story-guide-label, .remark)) {
+  display: none;
+}
+
+/* The time ruler is a fixed visual anchor across workspaces and inspectors. */
+.editor-shell:not(.assets-expanded) .timeline-panel[data-timeline-view] {
+  height: clamp(300px, var(--timeline), 65vh);
+  min-height: min(300px, 65vh);
+}
+.editor-shell .timeline-panel[data-timeline-view] .timeline-content {
+  min-height: 100%;
+  box-sizing: border-box;
+  padding-top: 12px;
+}
+.editor-shell .timeline-panel[data-timeline-view] .timeline-content > .ruler {
+  margin-top: auto;
+  flex: 0 0 32px;
+  height: 32px;
+  isolation: isolate;
+  background: var(--surface-canvas);
+}
+.editor-shell .timeline-panel[data-timeline-view] .timeline-body {
+  min-height: 0;
+}
+.editor-shell .timeline-view-elements .timeline-body {
+  margin-right: 16px;
+}
+
+/* Empty group lanes need no room in the sound view; keep the waveforms in reach. */
+.editor-shell .timeline-view-sound .timeline-guides:not(:has(.story-guide-label, .remark)) {
+  display: none;
+}
+.editor-shell .timeline-view-sound .timeline-content {
+  padding-top: 28px;
+}

@@ -1,0 +1,66 @@
+.provider-connect-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--splece-action-foreground);
+  background: var(--action-primary);
+  font-weight: 600;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--splece-duration-state) ease;
+}
+.provider-connect-button:hover { background: var(--splece-action-hover); }
+.provider-connect-button:focus-visible,
+.provider-connect-dialog button:focus-visible { outline: 2px solid var(--accent-active); outline-offset: 3px; }
+.provider-connect-dialog {
+  color: var(--text-primary);
+  background: var(--surface-panel);
+  border: 1px solid var(--divider);
+  border-radius: var(--splece-radius-panel);
+  padding: 0;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  box-shadow: none;
+}
+.provider-connect-dialog::-webkit-scrollbar { display: none; }
+.provider-connect-dialog::backdrop { background: color-mix(in srgb, var(--surface-canvas) 70%, transparent); }
+.provider-connect-dialog[open] { animation: provider-guide-in 180ms ease-out; }
+.provider-connect-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px 0;
+}
+.provider-connect-header button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.provider-connect-header button:hover { color: var(--text-primary); background: var(--surface-raised); }
+.provider-connect-header .icon { min-width: 44px; justify-content: center; }
+.provider-connect-content { padding: 12px 24px 24px; }
+.connections-contextual .connections-intro { margin-bottom: 20px; }
+.connections-contextual .connections-intro h2 { font-size: 28px; font-weight: 700; }
+.connections-contextual .connection-card { padding: 0; border: 0; background: none; }
+.connections-contextual .connection-card > header { display: none; }
+.connections-contextual .connection-local { border: 0; margin-top: 16px; padding: 0; }
+.connections-contextual .connection-footer { justify-content: flex-end; }
+.connections-contextual .primary { border-radius: 999px; box-shadow: none; font-weight: 600; }
+@keyframes provider-guide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 560px) { .provider-connect-content { padding: 12px 16px 20px; } .provider-connect-header { padding-inline: 12px; } }
+@media (prefers-reduced-motion: reduce) { .provider-connect-dialog[open] { animation: none; } .provider-connect-button { transition: none; } }

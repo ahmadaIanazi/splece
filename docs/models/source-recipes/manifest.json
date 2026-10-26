@@ -1,0 +1,23 @@
+[
+  {
+    "id": "tutorial-transcript",
+    "path": "docs/models/source-recipes/tutorial-transcript.txt",
+    "sha256": "bb7603ad6282761e8516789d42c479c4e49213d5a6f7ca592073e95a4c5369de",
+    "origin": "User-supplied attachment",
+    "executable": false
+  },
+  {
+    "id": "seedance-prompt-builder",
+    "path": "docs/models/source-recipes/seedance-prompt-builder.txt",
+    "sha256": "ade3f08ad2c0afdbd5464297063a6924215b1a66911a940f9ed1d3d06a3d49b9",
+    "origin": "User-supplied attachment",
+    "executable": false
+  },
+  {
+    "id": "tutorial-page",
+    "path": "docs/models/source-recipes/tutorial-page.txt",
+    "sha256": "46fcecdd9ee0270ae184a8c79ac3f2965e76c132c38fe81cd3281fd3dbc75b63",
+    "origin": "User-supplied attachment",
+    "executable": false
+  }
+]
