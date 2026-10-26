@@ -278,7 +278,7 @@ test("worker restart, immutable inputs, local media, failure retry and MP4 expor
       request("/media/" + done.media.id + "/optimize-preview", {}),
       request("/media/" + done.media.id + "/optimize-preview", {}),
     ]);
-    assert.equal(repaired[0].playback.version, 2);
+    assert.equal(repaired[0].playback.version, 3);
     assert.deepEqual(repaired[0], repaired[1]);
     assert.deepEqual(await fs.readFile(done.media.path), originalGeneration);
     assert.deepEqual(await request("/projects/" + p.id), beforeOptimization);

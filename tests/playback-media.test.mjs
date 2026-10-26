@@ -42,7 +42,7 @@ test("playback imports normalize variable cadence, preserve portrait shape/audio
   assert.equal(info.height, 320);
   assert.equal(info.audio, true);
   assert.equal(info.codec, "h264");
-  assert.equal(info.playback.version, 2);
+  assert.equal(info.playback.version, 3);
   assert.ok(Math.abs(info.duration - 2) < 0.15);
   const decoded = await run([
     "-i",
