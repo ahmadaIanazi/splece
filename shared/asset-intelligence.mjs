@@ -1,6 +1,23 @@
+import { normalizeCharacterProfile, lookDetails } from "./character-looks.mjs";
 import { normalizeVisualBrief } from "./asset-brief.mjs";
 import { cleanLibraryTags } from "./library-organization.mjs";
 const sets = {
+  image: [
+    [
+      "warm",
+      "Warm light",
+      "Preserve the subject and composition with warmer light.",
+      ["warm"],
+    ],
+    [
+      "cool",
+      "Cool light",
+      "Preserve the subject and composition with cooler light.",
+      ["cool"],
+    ],
+    ["detail", "Detail", "A closer view of the same subject.", ["detail"]],
+    ["wide", "Wide", "A wider view retaining the same subject.", ["wide"]],
+  ],
   character: [
     [
       "casual",
@@ -115,6 +132,9 @@ export function validateAssetUnderstanding(value) {
     name: str(value.name, 100),
     description: str(value.description, 4000),
     keywords: cleanLibraryTags(value.keywords || []).slice(0, 12),
+    setting: str(value.setting, 1000),
+    lookName: str(value.lookName, 80),
+    contextSuggestions: normalizeAssetSuggestions(value.contextSuggestions),
     variations: (Array.isArray(value.variations) ? value.variations : [])
       .slice(0, 4)
       .map((v) => ({
@@ -142,7 +162,15 @@ export function applyAssetUnderstanding(asset, result) {
 }
 export function imageBatchInputs(value) {
   const count = value.count ?? 1;
-  if (![1, 4].includes(count)) throw Error("Choose one or four variations.");
+  if (!Number.isInteger(count) || count < 1 || count > 4)
+    throw Error("Choose one to four images.");
+  if (value.candidates === true)
+    return Array.from({ length: count }, (_, i) => ({
+      ...value,
+      variationName: count > 1 ? `Option ${i + 1}` : "",
+      variationPrompt: "",
+      variationKeywords: [],
+    }));
   const presets = variationPresets(value.kind),
     ids = value.presetIds ?? [];
   if (
@@ -194,22 +222,52 @@ export function replaceAssetDescription(asset, result, mediaId) {
     descriptionMediaId: mediaId,
   };
   if (next.media?.id === mediaId) {
-    Object.assign(next, details, { variant: "", lookTags: {} });
+    Object.assign(next, details, {
+      lookKeywords: safe.keywords,
+      variant: "",
+      lookTags: {
+        ...next.lookTags,
+        ...(safe.setting ? { setting: safe.setting } : {}),
+      },
+    });
+    if (
+      safe.lookName &&
+      (!next.mainLookName || next.mainLookName === "Main look")
+    )
+      next.mainLookName = safe.lookName;
     // A generated look can also be the main reference. Keep both in agreement.
     next.variants = (next.variants || []).map((v) =>
-      v.media?.id === mediaId ? { ...v, ...details, tags: {} } : v,
+      v.media?.id === mediaId
+        ? {
+            ...v,
+            ...details,
+            keywords: safe.keywords,
+            tags: {
+              ...v.tags,
+              ...(safe.setting ? { setting: safe.setting } : {}),
+            },
+          }
+        : v,
     );
   } else {
     next.variants ||= [];
     const index = next.variants.findIndex((v) => v.media?.id === mediaId);
     if (index >= 0)
-      next.variants[index] = { ...next.variants[index], ...details, tags: {} };
+      next.variants[index] = {
+        ...next.variants[index],
+        ...details,
+        keywords: safe.keywords,
+        tags: {
+          ...next.variants[index].tags,
+          ...(safe.setting ? { setting: safe.setting } : {}),
+        },
+      };
     else
       next.variants.push({
         id: `look:${mediaId}`,
-        name: media.name || `Look ${next.variants.length + 1}`,
+        name: safe.lookName || media.name || `Look ${next.variants.length + 1}`,
         media,
-        tags: {},
+        tags: safe.setting ? { setting: safe.setting } : {},
         keywords: safe.keywords,
         ...details,
       });
@@ -223,4 +281,96 @@ export function replaceAssetDescription(asset, result, mediaId) {
       .slice(0, 30),
   );
   return next;
+}
+
+// Creative suggestions are based on the written story, not inferred from appearance.
+export function normalizeAssetSuggestions(value = {}) {
+  const result = { characterProfile: {}, voice: {} };
+  for (const [group, fields] of Object.entries({
+    characterProfile: ["role", "personality"],
+    voice: [
+      "tone",
+      "timbre",
+      "pitch",
+      "pace",
+      "accent",
+      "language",
+      "description",
+    ],
+  })) {
+    for (const key of fields) {
+      const text = value?.[group]?.[key];
+      if (typeof text === "string" && text.trim())
+        result[group][key] = text
+          .trim()
+          .slice(0, key === "description" ? 1000 : key === "role" ? 200 : 400);
+    }
+  }
+  return result;
+}
+export function assetCreativeContext(asset = {}) {
+  return {
+    characterProfile: normalizeCharacterProfile(asset.characterProfile || {}),
+    voice: normalizeAssetSuggestions({ voice: asset.voice }).voice,
+    looks: [
+      asset.media,
+      ...(asset.mediaList || []),
+      ...(asset.variants || []).map((v) => v.media),
+    ]
+      .filter(
+        (m, i, all) => m?.id && all.findIndex((x) => x?.id === m.id) === i,
+      )
+      .slice(0, 12)
+      .map((media) => {
+        const look = lookDetails(asset, media.id);
+        return {
+          mediaId: media.id,
+          name: String(look.name || "").slice(0, 80),
+          description: String(look.description || "").slice(0, 1500),
+          setting: String(look.tags?.setting || "").slice(0, 600),
+        };
+      }),
+  };
+}
+export function fillAssetDetails(asset, result, mediaId) {
+  const next = replaceAssetDescription(asset, result, mediaId);
+  const safe = validateAssetUnderstanding(result);
+  if (!next.name?.trim()) next.name = safe.name;
+  if (next.kind !== "character") return next;
+  for (const group of ["characterProfile", "voice"]) {
+    next[group] = { ...next[group] };
+    // A chosen voice preset expresses intent even when individual fields are empty.
+    if (group === "voice" && (next.voice.preset || next.voice.id)) continue;
+    for (const [key, value] of Object.entries(safe.contextSuggestions[group]))
+      if (!next[group][key]?.trim()) next[group][key] = value;
+  }
+  if (!next.characterProfile.age && result.visualBrief?.age)
+    next.characterProfile.age = normalizeVisualBrief(
+      result.visualBrief,
+      "character",
+    ).age;
+  if (!next.characterProfile.identity && result.visualBrief?.features)
+    next.characterProfile.identity = normalizeVisualBrief(
+      result.visualBrief,
+      "character",
+    ).features;
+  return next;
+}
+export function validateLookSuggestion(value) {
+  if (
+    !value ||
+    typeof value.prompt !== "string" ||
+    !value.prompt.trim() ||
+    value.prompt.length > 2000
+  )
+    throw Error(
+      "The assistant returned no usable variation. Your writing is unchanged.",
+    );
+  return {
+    name:
+      typeof value.name === "string"
+        ? value.name.trim().slice(0, 80)
+        : "New look",
+    prompt: value.prompt.trim(),
+  };
 }

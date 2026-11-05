@@ -3,7 +3,10 @@ import { ProviderAction } from "./provider-connect";
 import { Sparkles, LoaderCircle, X, Undo2 } from "lucide-react";
 import { api } from "./state";
 import { HoldGenerate } from "./composer-tools";
-import { replaceAssetDescription } from "../shared/asset-intelligence.mjs";
+import {
+  fillAssetDetails,
+  assetCreativeContext,
+} from "../shared/asset-intelligence.mjs";
 
 export function AssetUnderstanding({
   asset,
@@ -30,7 +33,12 @@ export function AssetUnderstanding({
     mediaId,
     kind: asset.kind,
     name: asset.name || "",
-    description: look?.description || asset.description || "",
+    description:
+      look?.description ||
+      (mediaId === asset.media?.id ? asset.variant || asset.description : "") ||
+      "",
+    fillDetails: true,
+    context: assetCreativeContext(asset),
   };
   const signature = JSON.stringify([
     input,
@@ -82,11 +90,11 @@ export function AssetUnderstanding({
       setQuote(null);
       return;
     }
-    const next = replaceAssetDescription(asset, result, mediaId);
+    const next = fillAssetDetails(asset, result, mediaId);
     setSuggestions(result.variations || []);
     change(next);
     setUndo({ before: asset, after: next });
-    setNotice("Description updated · autosave on");
+    setNotice("Details and search tags updated · you can undo");
     setQuote(null);
   }
   const review = () =>
@@ -126,38 +134,48 @@ export function AssetUnderstanding({
       "variant",
       "visualBrief",
       "descriptionMediaId",
+      "name",
+      "mainLookName",
+      "libraryTags",
+      "characterProfile",
+      "voice",
       "lookTags",
+      "lookKeywords",
       "variants",
     ].every(
       (key) => JSON.stringify(asset[key]) === JSON.stringify(undo.after[key]),
     );
   return (
     <section className="asset-understanding">
-      <ProviderAction provider="deepseek" feature="image descriptions" returnLabel="Back to my asset">
-      <button
-        type="button"
-        className="asset-understand-trigger"
-        disabled={busy || !mediaId}
-        onClick={review}
-        title={
-          mediaId
-            ? "Rewrite visual details from the selected image"
-            : "Add an image first"
-        }
+      <ProviderAction
+        provider="deepseek"
+        feature="image descriptions"
+        returnLabel="Back to my asset"
       >
-        {busy ? (
-          <LoaderCircle size={15} className="spin" />
-        ) : (
-          <Sparkles size={15} />
-        )}
-        <span>{busy ? "Describing image…" : "Update description"}</span>
-        <small>AI</small>
-      </button>
+        <button
+          type="button"
+          className="asset-understand-trigger"
+          disabled={busy || !mediaId}
+          onClick={review}
+          title={
+            mediaId
+              ? "Describe this image, add search tags and fill missing story details"
+              : "Add an image first"
+          }
+        >
+          {busy ? (
+            <LoaderCircle size={15} className="spin" />
+          ) : (
+            <Sparkles size={15} />
+          )}
+          <span>{busy ? "Analyzing image…" : "Analyze & fill details"}</span>
+          <small>AI</small>
+        </button>
       </ProviderAction>
       {quote && (
         <div className="asset-understand-panel">
           <header>
-            <span>Describe this reference</span>
+            <span>Analyze this image</span>
             <button
               type="button"
               aria-label="Close description estimate"
@@ -169,26 +187,41 @@ export function AssetUnderstanding({
           <p>
             {quote.executionMode === "test"
               ? "Offline mode · no credits or changes to your writing."
-              : "Replace visual details using this image. Voice settings stay unchanged. You can undo."}
+              : "Fill visual details and search tags from the image. Suggest missing character and voice details from your story. Your existing voice choices stay. You can undo."}
           </p>
-          <ProviderAction provider="deepseek" feature="image descriptions" returnLabel="Back to my asset">
-          <HoldGenerate
-            enabled
-            disabled={busy}
-            busy={busy}
-            requestKey={quote.id}
-            action="update"
-            label="description"
-            price={
-              quote.executionMode === "test"
-                ? "$0 · Offline"
-                : `~$${Number(quote.estimate?.amount ?? 0).toFixed(4)}`
-            }
-            onGenerate={analyze}
-          />
+          <ProviderAction
+            provider="deepseek"
+            feature="image descriptions"
+            returnLabel="Back to my asset"
+          >
+            <HoldGenerate
+              enabled
+              disabled={busy}
+              busy={busy}
+              requestKey={quote.id}
+              action="update"
+              label="description"
+              price={
+                quote.executionMode === "test"
+                  ? "$0 · Offline"
+                  : quote.estimate?.amount == null
+                    ? "Rate unavailable"
+                    : `~$${Number(quote.estimate.amount).toFixed(4)}`
+              }
+              onGenerate={analyze}
+            />
           </ProviderAction>
         </div>
       )}
+      {notice &&
+        undo &&
+        Object.keys(undo.after.voice || {}).some(
+          (key) => !undo.before.voice?.[key] && undo.after.voice[key],
+        ) && (
+          <p className="asset-voice-suggestion-note">
+            Voice details were suggested from your story. Edit them in Voice.
+          </p>
+        )}
       {notice && (
         <p role="status">
           {notice}{" "}
@@ -203,7 +236,13 @@ export function AssetUnderstanding({
                   "variant",
                   "visualBrief",
                   "descriptionMediaId",
+                  "name",
+                  "mainLookName",
+                  "libraryTags",
+                  "characterProfile",
+                  "voice",
                   "lookTags",
+                  "lookKeywords",
                   "variants",
                 ]) {
                   if (undo.before[key] === undefined) delete next[key];

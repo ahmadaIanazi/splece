@@ -1,10 +1,11 @@
+import { validateQualityPresets } from "./generation-quality.mjs";
 import { validateWorkflowSettings } from "./workflows.mjs";
 import { normalizeCreativeDirection } from "./creative-presets.mjs";
 // Categories are inherited independently. Legacy projects remain explicit overrides.
 export const settingGroups = {
   workflows: ["workflows"],
   prompting: ["systemPrompt", "automation", "templates", "deliveryPresets", "creativeDirection"],
-  video: ["videoDefaults", "concurrency"],
+  video: ["videoDefaults", "concurrency", "generationPresets"],
   audio: ["audioDefaults"],
   exports: ["export"],
 };
@@ -106,6 +107,7 @@ export function validateDefaults(value) {
     throw Error("Voice deliveries must be text.");
   if (result.creativeDirection !== undefined) result.creativeDirection = normalizeCreativeDirection(result.creativeDirection);
   if (result.workflows !== undefined) result.workflows = validateWorkflowSettings(result.workflows);
+  if (result.generationPresets !== undefined) result.generationPresets = validateQualityPresets(result.generationPresets);
   return result;
 }
 // Editing inherited values anywhere (including the export dialog) creates an override.

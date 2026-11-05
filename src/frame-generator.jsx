@@ -1,3 +1,5 @@
+import { useAIRouting } from "./ai-providers";
+import { qualityResolution } from "../shared/generation-quality.mjs";
 import { frameOpeningReference } from "../shared/image-story.mjs";
 import { ProviderAction } from "./provider-connect";
 import React, { useEffect, useRef, useState } from "react";
@@ -18,6 +20,8 @@ const isActive = (job) =>
   ["queued", "submitting", "processing", "saving"].includes(job.state);
 
 export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
+  const {state:aiRouting} = useAIRouting();
+  const imageRoute=aiRouting?.routes.image;
   const assetId = `frame:${draft.id}:${boundary}`;
   const recoveryKey = `splece-frame-idea:${project.id}:${assetId}`;
   const [saved] = useState(() => {
@@ -74,12 +78,18 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
     if (media?.kind === "image") referenceKeys.add(`${media.id}:0`);
   }
   const referenceCount = referenceKeys.size;
-  const effectiveProvider = referenceCount > 1 ? "fal" : provider;
+  const effectiveProvider = provider;
   const mode = referenceCount ? "vary" : "create";
-  const model = imageModels.find(
-    (item) => item.provider === effectiveProvider && item.mode === mode,
+  const model = imageModels.find(item=>item.id===imageRoute?.model && item.mode===mode && item.provider===effectiveProvider) || imageModels.find(
+    (item) => item.provider === effectiveProvider && item.mode === mode && item.id !== "venice-grok-quality",
   );
+  const [quality, setQuality] = useState('draft');
+  const refreshQualityQuote = useRef(false);
+  useEffect(()=>{if(refreshQualityQuote.current){refreshQualityQuote.current=false;review();}},[quality]);
+  const qualityOptions = Object.fromEntries(['draft','final'].map(q=>[q,qualityResolution(project.settings.generationPresets,model,q)]));
+  useEffect(()=>{if(imageRoute)setProvider(imageRoute.provider);},[imageRoute?.provider]);
   const input = {
+    resolution: qualityOptions[quality],
     assetId,
     kind: "frame",
     draftId: draft.id,
@@ -113,6 +123,7 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
       alive.current = false;
     };
   }, []);
+  useEffect(()=>{setQuote(null);},[imageRoute?.enabled]);
   useEffect(() => {
     setQuote(null);
     saveLocalDraft(localStorage, recoveryKey, {
@@ -329,7 +340,7 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
         </details>
       )}
       <div className="frame-generator-provider" aria-label="Image provider">
-        {["venice", "fal"].map((item) => (
+        {["venice", "fal", "xai"].map((item) => (
           <button
             type="button"
             key={item}
@@ -337,12 +348,12 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
             disabled={item === "venice" && referenceCount > 1}
             title={
               item === "venice" && referenceCount > 1
-                ? "Venice supports one image; fal.ai preserves multiple references"
+                ? "Venice supports one image; choose fal.ai or xAI for multiple references"
                 : undefined
             }
             onClick={() => setProvider(item)}
           >
-            {item === "fal" ? "fal.ai" : "Venice"}
+            {item === "fal" ? "fal.ai" : item === "xai" ? "xAI" : "Venice"}
           </button>
         ))}
         <small>{model.name}</small>
@@ -357,7 +368,7 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
           {error}
         </p>
       )}
-      <ProviderAction provider={effectiveProvider} feature={`${boundary} frame generation`} returnLabel="Back to my frame">
+      <ProviderAction lane="image" provider={effectiveProvider} feature={`${boundary} frame generation`} returnLabel="Back to my frame">
       {quote ? (
         <div className="frame-generator-confirm">
           <small>
@@ -366,6 +377,9 @@ export function FrameGenerator({ project, draft, boundary, onUse, flush }) {
               : `Estimated $${quote.price.amount.toFixed(3)}`}
           </small>
           <HoldGenerate
+                  quality={quality}
+                  qualityOptions={qualityOptions}
+                  onQualityChange={value=>{if(value!==quality){refreshQualityQuote.current=true;setQuote(null);setQuality(value);}}}
             enabled
             disabled={busy}
             busy={busy}

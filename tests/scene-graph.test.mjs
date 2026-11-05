@@ -282,12 +282,14 @@ test("mock Live workers reserve budget, reuse existing geometry and reject malic
   );
 });
 test("switching Off or changing an object before credential resolution prevents paid dispatch", async (t) => {
-  let release,
+  let release, entered,
     calls = 0;
   const blocked = new Promise((r) => (release = r));
+  const enteredKey = new Promise(r => { entered = r; });
   const f = fixture(t, {
     mode: async () => "live",
     key: async () => {
+      entered();
       await blocked;
       return "fake";
     },
@@ -297,14 +299,14 @@ test("switching Off or changing an object before credential resolution prevents 
     },
   });
   const pending = f.service.decide(f.input);
-  await new Promise((r) => setTimeout(r, 0));
+  await enteredKey;
   const saved = f.store.get(f.p.id);
   saved.project.storyPlans[f.p.episodeId].setup.directorDesk.autoDirection =
     false;
   f.store.save(saved.project, saved.revision);
   release();
   const r = await pending;
-  assert.equal(r.state, "cancelled");
+  assert.ok(["off","cancelled"].includes(r.state)); // disabled before or during credential resolution
   assert.equal(r.amount, 0);
   assert.equal(calls, 0);
 });

@@ -1,4 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
+import { ComposerPopover } from "./composer-popover";
+import { normalizeLookText } from "../shared/look-selection.mjs";
 import { UserRound } from "lucide-react";
 
 // Store plain prompt text, render mentions as non-editable inline tokens. Local
@@ -39,6 +41,11 @@ function renderText(el, value, assets) {
       token.contentEditable = "false";
       token.dataset.mention = m[0];
       token.title = asset.kind + " reference · " + asset.name;
+      if (asset.kind === "character") {
+        token.setAttribute("role", "button");
+        token.tabIndex = 0;
+        token.setAttribute("aria-label", `Choose look for ${asset.name}`);
+      }
       if (asset.media?.thumbnail) {
         const img = document.createElement("img");
         img.src = asset.media.thumbnail;
@@ -88,6 +95,7 @@ export function CanvasWriting({
   onChange,
   assets,
   onMention,
+  onLook,
   label,
   placeholder,
   onCursor,
@@ -111,6 +119,16 @@ export function CanvasWriting({
       el.dataset.initialized = "true";
       if (focused && offset != null)
         placeCaret(el, Math.min(value.length, offset));
+    }
+    // Refresh mention portraits without replacing tokens or disturbing the caret.
+    for (const token of el.querySelectorAll("[data-mention]")) {
+      const asset = assets.find(a => token.dataset.mention === `@[${a.name}]`);
+      const thumbnail = asset?.media?.thumbnail;
+      let img = token.querySelector("img");
+      if (thumbnail) {
+        if (!img) { img = document.createElement("img"); img.alt = ""; token.prepend(img); }
+        if (img.getAttribute("src") !== thumbnail) img.src = thumbnail;
+      } else img?.remove();
     }
   }, [value, assets]);
   const inspect = () => {
@@ -146,7 +164,7 @@ export function CanvasWriting({
         .filter(
           (a) =>
             !["footage", "audio"].includes(a.kind) &&
-            a.name.toLowerCase().includes(match.query.toLowerCase()),
+            normalizeLookText(a.name).includes(normalizeLookText(match.query.trim())),
         )
         .slice(0, 7)
     : [];
@@ -160,6 +178,7 @@ export function CanvasWriting({
     placeCaret(ref.current, offset);
     onChange(next);
     onMention(a);
+    if (a.kind === "character") onLook?.(a, ref.current);
     setMatch(null);
     onCursor?.({ start: offset, end: offset });
   };
@@ -202,14 +221,20 @@ export function CanvasWriting({
           composing.current = false;
           commit();
         }}
-        onClick={inspect}
+        onClick={e => {
+          const token = e.target.closest("[data-mention]");
+          const asset = token && assets.find(a => token.dataset.mention === `@[${a.name}]`);
+          if (asset?.kind === "character" && onLook) { setMatch(null); onLook(asset, token); }
+          else inspect();
+        }}
         onKeyUp={(e) => {
-          if (match && ["ArrowDown", "ArrowUp", "Escape"].includes(e.key))
+          if (["ArrowDown", "ArrowUp", "Escape", "Enter", "Tab"].includes(e.key))
             return;
           inspect();
         }}
-        onBlur={() => {
+        onBlur={(e) => {
           setMatch(null);
+          if (ref.current?.contains(e.relatedTarget) || e.relatedTarget?.closest(".composer-popover")) return;
           // Recognize pasted mention tokens after editing, without interrupting
           // typing or composition with a DOM rewrite.
           if (!composing.current)
@@ -248,6 +273,12 @@ export function CanvasWriting({
           }
         }}
         onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return;
+          const token = e.target.closest("[data-mention]");
+          if (token && onLook && ["Enter", " "].includes(e.key)) {
+            const asset = assets.find(a => token.dataset.mention === `@[${a.name}]`);
+            if (asset?.kind === "character") { e.preventDefault(); onLook(asset, token); return; }
+          }
           if (
             match &&
             candidates.length &&
@@ -275,15 +306,12 @@ export function CanvasWriting({
         }}
       />
       {match && (
-        <div
-          className="mention-menu"
-          role="listbox"
-          aria-label="Mention an asset"
-        >
+        <ComposerPopover anchor={ref.current} onClose={() => setMatch(null)} role="listbox" label="Mention an asset" activeIndex={active}>
           {candidates.length ? (
             candidates.map((a, i) => (
               <button
                 key={a.id}
+                type="button"
                 role="option"
                 aria-selected={i === active}
                 onMouseDown={(e) => e.preventDefault()}
@@ -303,7 +331,7 @@ export function CanvasWriting({
           ) : (
             <small>No matching assets</small>
           )}
-        </div>
+        </ComposerPopover>
       )}
     </div>
   );

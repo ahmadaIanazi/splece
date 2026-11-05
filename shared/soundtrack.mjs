@@ -164,6 +164,7 @@ export function createSoundtrackPlan(project, options, makeId) {
       last.push(s);
     else groups.push([s]);
   }
+  const speakingIds = new Set(clips.filter(c=>dialogueScript(project,c).length).map(c=>c.id));
   const id = makeId(),
     units = [];
   const add = (role, ss) => {
@@ -175,7 +176,7 @@ export function createSoundtrackPlan(project, options, makeId) {
     units.push({
       id: makeId(),
       role,
-      ...(role === "ambience" ? { model: AMBIENCE_MODEL } : {}),
+      ...(role === "ambience" || (role === "effect" && ss.some(s=>speakingIds.has(s.clipId))) ? { model: AMBIENCE_MODEL } : {}),
       sources: ss,
       start: round(start),
       duration: round(end - start),
@@ -357,7 +358,7 @@ export function applySoundtrackResults(project, run) {
         kind: "audio",
         name: unit.media.name,
         description:
-          run.executionMode === "live"
+          run.providerId === "local-timing" ? "Dialogue · timing fitted locally; original recording kept" : run.executionMode === "live"
             ? `AI soundtrack · fal.ai ${unit.role === "dialogue" ? "ElevenLabs v3" : unit.model === AMBIENCE_MODEL ? "ElevenLabs Sound Effects v2" : "MMAudio V2"}`
             : "Offline soundtrack sample",
         media: unit.media,
@@ -365,7 +366,7 @@ export function applySoundtrackResults(project, run) {
         tags: [
           "soundtrack",
           unit.role,
-          run.executionMode === "live" ? "ai" : "test",
+          run.providerId === "local-timing" ? "timing-fitted" : run.executionMode === "live" ? "ai" : "test",
         ],
         version: 1,
       });

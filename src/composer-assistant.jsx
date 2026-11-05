@@ -1,3 +1,4 @@
+import { chooseLook } from "../shared/look-selection.mjs";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ConnectProviderButton, useProviderConnection } from "./provider-connect";
 import { Sparkles, ChevronDown, X, RotateCcw, Plus } from "lucide-react";
@@ -23,7 +24,7 @@ export function useComposerAssistant({
   const [status, setStatus] = useState(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
-  const { needsConnection } = useProviderConnection("deepseek", status?.mode);
+  const { needsConnection } = useProviderConnection("deepseek", status?.mode,"assistant");
   const session = useRef(null);
   if (!session.current) {
     try {
@@ -306,9 +307,7 @@ export function useComposerAssistant({
     resetAppearance(id) {
       update((p) => {
         const d = p.drafts.find((d) => d.id === draft.id);
-        d.assistant ??= {};
-        d.assistant.appearances ??= {};
-        d.assistant.appearances[id] = "following";
+        chooseLook(d, id, "auto");
       });
     },
   };
@@ -317,11 +316,11 @@ const money = (value) => `$${Number(value || 0).toFixed(4)}`;
 export function AssistantHeader({ assistant }) {
   const [open, setOpen] = useState(false),
     s = assistant.status;
-  const { needsConnection } = useProviderConnection("deepseek", s?.mode);
+  const { needsConnection } = useProviderConnection("deepseek", s?.mode,"assistant");
   if (!s) return null;
   return (
     <div className="composer-assistant-control">
-      {needsConnection ? <ConnectProviderButton provider="deepseek" feature="the Assistant" returnLabel="Back to my work" /> : <button
+      {needsConnection ? <ConnectProviderButton lane="assistant" provider="deepseek" feature="the Assistant" returnLabel="Back to my work" /> : <button
         className="assistant-switch"
         role="switch"
         aria-label="Assistant"

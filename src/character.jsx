@@ -75,28 +75,7 @@ export function CharacterMedia({ asset, change, voiceOnly = false }) {
       )}
       {voiceOnly && asset.kind === "character" && (
         <>
-          <fieldset className="character-gender">
-            <legend>Character gender</legend>
-            {[
-              ["male", "♂", "Male"],
-              ["female", "♀", "Female"],
-              ["other", "⚧", "Other"],
-            ].map(([value, icon, label]) => (
-              <button
-                type="button"
-                key={value}
-                aria-pressed={asset.gender === value}
-                onClick={() => change({ ...asset, gender: value })}
-              >
-                <span aria-hidden="true">{icon}</span> {label}
-              </button>
-            ))}
-          </fieldset>
-          <h3>Voice identity</h3>
-          <p className="muted">
-            Reused for this character’s spoken lines. Descriptions guide
-            delivery; they do not lock or clone a voice.
-          </p>
+          <details className="voice-delivery-details"><summary>Delivery & language</summary>
           <label className="field">
             <span>Voice preset</span>
             <select
@@ -203,6 +182,7 @@ export function CharacterMedia({ asset, change, voiceOnly = false }) {
               ),
             )}
           </div>
+          </details>
           <label className="field">
             <span>Voice direction</span>
             <textarea

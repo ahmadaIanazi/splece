@@ -205,6 +205,7 @@ export function adoptReadyGenerations(project, jobs) {
       (j) =>
         j.state === "ready" &&
         j.media &&
+        !clip.removedTakeIds?.includes(j.media.id) &&
         !clip.takes.some((t) => t.id === j.media.id),
     );
     if (!added.length) continue;
@@ -216,7 +217,8 @@ export function adoptReadyGenerations(project, jobs) {
     clip.takes.sort(
       (a, b) => (order.get(a.jobId) ?? -1) - (order.get(b.jobId) ?? -1),
     );
-    const newest = related.filter((j) => j.state === "ready" && j.media).at(-1);
+    const newest = related.filter((j) => j.state === "ready" && j.media &&
+      clip.takes.some(t => t.id === j.media.id)).at(-1);
     // A slow older request finishing later must not replace a newer selected result.
     const nextTake = clip.takes.find((t) => t.id === newest.media.id);
     const fitsRepair =

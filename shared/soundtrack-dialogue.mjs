@@ -55,6 +55,7 @@ export function dialogueDraft(project, clip) {
 export function characterVoice(project, asset) {
   const chosen = project.production?.voiceAssignments?.[asset?.id];
   if (dialogueVoices.includes(chosen)) return chosen;
+  if (dialogueVoices.includes(asset?.voice?.providerVoice)) return asset.voice.providerVoice;
   const identity = fields.map((f) => asset?.voice?.[f] || "").join(" ");
   if (/gravel|rough|raspy/i.test(identity))
     return asset?.gender === "female"

@@ -1,3 +1,6 @@
+import {characterIdentityText} from "../shared/character-looks.mjs";
+import { soundContinuation, soundContinuationText } from "../shared/video-sound-continuity.mjs";
+import { effectiveVideoSound, videoSoundSection } from "../shared/video-sound.mjs";
 import {validateMediaVisual} from "../shared/media-animation.mjs";
 import {validateElements} from "../shared/elements.mjs";
 import { visualBriefText } from "../shared/asset-brief.mjs";
@@ -174,7 +177,7 @@ export function compilePrompt(project, draft, model) {
         assets
           .map(
             (x) =>
-              `${x.name} (${x.kind}${x.kind === "character" && x.gender ? ", " + x.gender : ""}, version ${x.version || 1}): ${x.description}${visualBriefText({...x.visualBrief,...x.selectedVariant?.visualBrief}, x.kind) ? "\nApproved visual details (refine the base description): " + visualBriefText({...x.visualBrief,...x.selectedVariant?.visualBrief}, x.kind) : ""}${x.variant ? "\nAppearance / outfit / pose: " + x.variant : ""}${
+              `${x.name} (${x.kind}${x.kind === "character" && x.gender ? ", " + x.gender : ""}, version ${x.version || 1}): ${x.description}${characterIdentityText(x) ? "\nCharacter identity across looks: " + characterIdentityText(x) : ""}${x.lookTags?.setting ? "\nMovement & setting: " + x.lookTags.setting : ""}${visualBriefText({...x.visualBrief,...x.selectedVariant?.visualBrief}, x.kind) ? "\nApproved visual details (refine the base description): " + visualBriefText({...x.visualBrief,...x.selectedVariant?.visualBrief}, x.kind) : ""}${x.variant ? "\nAppearance / outfit / pose: " + x.variant : ""}${
                 x.selectedVariant
                   ? "\nSelected variant: " +
                     x.selectedVariant.name +
@@ -278,6 +281,11 @@ export function compilePrompt(project, draft, model) {
       .filter(Boolean)
       .join("\n"),
   });
+  const soundSettings = effectiveVideoSound(project, draft);
+  const soundReference = soundContinuation(project, draft, model, soundSettings);
+  const soundDirection = videoSoundSection(project, draft, model);
+  if (soundDirection && soundReference.source) soundDirection.text += "\n" + soundContinuationText(soundSettings);
+  if (soundDirection) sections.push(soundDirection);
   const continuity = continuitySection(project, draft);
   if (continuity) sections.push(continuity);
   sections.push(...workflowGuidance(project.settings, "video", "continuity").map(s => ({...s,label:"Workflow · " + s.label})));
@@ -340,6 +348,9 @@ export function compilePrompt(project, draft, model) {
   const directionContext = timelineDirectionContext(project, draft);
   const result = {
     injectionVersion: CREATIVE_INJECTION_VERSION,
+    ...(draft.soundContinuity?.enabled && soundSettings.enabled && draft.sectionOverrides?.['Sound direction'] !== '' ? {soundReferenceIntent:true} : {}),
+    ...(soundReference.source ? {soundReference: soundReference.source} : {}),
+    ...(soundReference.reason ? {soundReferenceError: soundReference.reason} : {}),
     ...(directionContext ? {directionContext} : {}),
     planningContext,
     sections,
@@ -360,12 +371,13 @@ export function compilePrompt(project, draft, model) {
   };
   // An automatic continuity suggestion must not change the chosen video workflow.
   // Explicit frames stay visible so validation can explain incompatible inputs.
+  const canonicalBoundaries = structuredClone(result.boundaries);
   result.omittedAutomaticFrames = [];
   if (model)
     for (const key of ["start", "end"]) {
       if (
         (result.boundaries[key]?.mode === "auto" ||
-          (result.boundaries[key]?.timelineCapture &&
+          (result.boundaries[key]?.mode !== "pinned" && result.boundaries[key]?.timelineCapture &&
             (model.continuityAsReference ||
               /^wan-3-0-.*reference-to-video$/.test(model.id)))) &&
         (!model.frames || (key === "end" && model.endFrame === false))
@@ -416,6 +428,12 @@ export function compilePrompt(project, draft, model) {
       for (const visual of assets.filter(x=>x.projectVisualRole)) if (!result.references.some(x=>x.id===visual.id)) result.references.push(visual);
     }
   }
+  result.modelInputs = {
+    references: result.references.map(ref => ({id:ref.id,kind:ref.kind,
+      selectedMediaList:(ref.selectedMediaList || (ref.selectedMedia ? [ref.selectedMedia] : [])).map(media=>({id:media.id}))})),
+    boundaries: canonicalBoundaries,
+    before: before ? {takes: (before.takes || []).map(t=>({id:t.id}))} : null,
+  };
   for (const key of ["start", "end"]) {
     const frame =
       result[

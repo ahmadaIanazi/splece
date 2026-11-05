@@ -88,7 +88,7 @@ export function DirectionComposer({
       <header className="direction-composer-header">
         <button
           className="direction-icon-button"
-          aria-label="Back to All timeline"
+          aria-label="Close direction"
           onClick={onClose}
         >
           <ArrowLeft size={17} />
@@ -111,6 +111,7 @@ export function DirectionComposer({
         </button>
       </header>
       <div className="direction-composer-scroll">
+        <p className="studio-uplift-note">Guides future generations in this range. Existing footage stays as it is.</p>
         {selected ? (
           <div className="direction-selection">
             <div className="direction-name-row">
@@ -247,7 +248,7 @@ export function DirectionComposer({
                   {[
                     {
                       id: "",
-                      name: "Inherit",
+                      name: "Follow project",
                       text: "Use the project defaults and any other overlapping direction.",
                     },
                     ...control.options,

@@ -12,6 +12,8 @@ import {
   applyAssetUnderstanding,
   imageBatchInputs,
   replaceAssetDescription,
+  fillAssetDetails,
+  assetCreativeContext,
 } from "../shared/asset-intelligence.mjs";
 import {
   imageAssetPrompt,
@@ -115,7 +117,7 @@ test("Four quick variants use distinct type-aware directions without changing au
   );
   assert.throws(
     () => imageBatchInputs({ kind: "character", count: 8 }),
-    /one or four/,
+    /one to four/,
   );
   const input = normalizeImageInput({
     ...imageBatchInputs({
@@ -342,4 +344,69 @@ test("Updating an alternate uploaded image makes a scoped look without overwriti
     () => replaceAssetDescription(asset, result, "missing"),
     /no longer attached/,
   );
+});
+
+test('generic Images assets use cached image understanding with no provider calls in Test mode', async t => {
+  const {p,service,input}=await setup(t);
+  const quote=await service.quote(p.id,{...input,kind:'image'});
+  const job=await service.analyze(p.id,quote.id);
+  assert.equal(job.state,'ready');
+  assert.equal(job.executionMode,'test');
+  assert.equal(job.result.variations.length,4);
+  assert.equal((await service.quote(p.id,{...input,kind:'image'})).cached,true);
+});
+
+test("Analysis fills missing story fields, keeps manual voice choices and scopes visible setting to the selected look", () => {
+  const asset={id:"a",kind:"character",name:"Noora",description:"Main",media:{id:"main",kind:"image"},mediaList:[{id:"alt",kind:"image"}],characterProfile:{role:"Teacher"},voice:{tone:"My tone"}};
+  const enriched={...result,setting:"Standing beside a board",lookName:"Classroom",visualBrief:{age:"Adult"},contextSuggestions:{characterProfile:{role:"Dancer",personality:"Patient"},voice:{tone:"Warm",pace:"Unhurried",language:"Arabic"}}};
+  const next=fillAssetDetails(asset,enriched,"alt");
+  assert.equal(next.description,"Main");
+  assert.equal(next.variants[0].description,result.description);
+  assert.equal(next.variants[0].tags.setting,enriched.setting);
+  assert.equal(next.characterProfile.role,"Teacher");
+  assert.equal(next.characterProfile.personality,"Patient");
+  assert.equal(next.voice.tone,"My tone");
+  assert.equal(next.voice.pace,"Unhurried");
+  assert.deepEqual(next.libraryTags,["blue","coat"]);
+  const preset=fillAssetDetails({...asset,voice:{preset:"chosen"}},enriched,"alt");
+  assert.deepEqual(preset.voice,{preset:"chosen"});
+  assert.equal(asset.voice.pace,undefined);
+  assert.equal(assetCreativeContext(next).looks[1].setting,enriched.setting);
+});
+test("Candidate batches use unchanged writing, never inject preset outfits", () => {
+  for (const count of [1,2,3,4]) {
+    const rows=imageBatchInputs({kind:"character",count,candidates:true,description:"Pastel neon glitter sketch"});
+    assert.equal(rows.length,count);
+    assert.ok(rows.every(r=>r.variationPrompt==="" && r.description==="Pastel neon glitter sketch"));
+  }
+  assert.throws(()=>imageBatchInputs({count:1.5,candidates:true}),/one to four/);
+});
+test("Look suggestions use story and analyzed looks with strict JSON, preserve prose and bill once", async t=>{
+  let request;
+  const {p,service,data}=await setup(t,{mode:async()=>"live",transport:async(url,opts)=>{
+    request=JSON.parse(opts.body);
+    return Response.json({usage:{prompt_tokens:300,completion_tokens:100},choices:[{finish_reason:"stop",message:{content:JSON.stringify({name:"Reading",prompt:"Same teacher, seated with a book. Keep her identity and clothing."})}}]});
+  }});
+  await credentials(data,"deepseek").saveKey("test-key");
+  const job=await service.brief(p.id,{assetId:"a",kind:"character",description:"",purpose:"variation",context:{characterProfile:{role:"Teacher"},looks:[{name:"Standing",description:"Mauve abaya",setting:"At the board"}]}});
+  assert.equal(job.state,"ready");
+  assert.equal(job.result.name,"Reading");
+  assert.equal(request.response_format.type,"json_object");
+  assert.match(request.messages[1].content,/Mauve abaya/);
+  assert.match(request.messages[1].content,/Teacher/);
+  assert.ok(job.billing);
+  assert.equal(job.input.description,"");
+});
+test("Offline look suggestion never invents a live suggestion", async t=>{
+  const {p,service}=await setup(t);
+  const job=await service.brief(p.id,{assetId:"a",kind:"character",description:"",purpose:"variation"});
+  assert.equal(job.state,"ready"); assert.equal(job.result,null); assert.equal(job.attempted,undefined);
+});
+test("Analyze and fill quotes snapshot written context and revalidate when it changes", async t=>{
+  const {p,service,input}=await setup(t);
+  const first=await service.quote(p.id,{...input,fillDetails:true,context:{characterProfile:{role:"Teacher"}}});
+  await service.analyze(p.id,first.id);
+  const second=await service.quote(p.id,{...input,fillDetails:true,context:{characterProfile:{role:"Pilot"}}});
+  assert.notEqual(first.id,second.id);
+  assert.equal(second.input.context.characterProfile.role,"Pilot");
 });

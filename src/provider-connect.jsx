@@ -20,8 +20,10 @@ function publish(next) {
 }
 async function refreshStatus() {
   if (pending) return pending;
-  pending = Promise.allSettled([api("/connections"), api("/studio/mode")]).then(([connections, mode]) => {
+  pending = Promise.allSettled([api("/connections"), api("/studio/mode"), api("/ai-routing")]).then(([connections, mode, routing]) => {
     publish({
+      online: routing.status === "fulfilled" ? routing.value.online : status.online,
+      routes: routing.status === "fulfilled" ? routing.value.routes : status.routes,
       connections: connections.status === "fulfilled" ? connections.value.connections : status.connections,
       mode: mode.status === "fulfilled" ? mode.value.mode : status.mode,
     });
@@ -30,6 +32,7 @@ async function refreshStatus() {
 }
 function subscribe(callback) {
   if (!subscribers.size) {
+    window.addEventListener("ai-routing-changed", refreshStatus);
     window.addEventListener("provider-catalog-updated", refreshStatus);
     window.addEventListener("provider-key-saved", refreshStatus);
     window.addEventListener("studio-mode-changed", refreshStatus);
@@ -39,6 +42,7 @@ function subscribe(callback) {
   return () => {
     subscribers.delete(callback);
     if (!subscribers.size) {
+      window.removeEventListener("ai-routing-changed", refreshStatus);
       window.removeEventListener("provider-catalog-updated", refreshStatus);
       window.removeEventListener("provider-key-saved", refreshStatus);
       window.removeEventListener("studio-mode-changed", refreshStatus);
@@ -46,38 +50,44 @@ function subscribe(callback) {
   };
 }
 
-export function useProviderConnection(provider, mode) {
+export function useProviderConnection(provider, mode, lane) {
   const value = useSyncExternalStore(subscribe, snapshot, snapshot);
+  const route = value.routes?.[lane || (provider === 'deepseek' ? 'text' : '')];
+  const resolvedProvider = (!lane || ["text","assistant"].includes(lane)) ? route?.provider || provider : provider;
+  const resolvedMode = value.online === false ? "test" : route ? (route.enabled ? 'live' : 'test') : mode ?? value.mode;
   return {
-    needsConnection: providerNeedsConnection(value.connections, provider, mode ?? value.mode),
+    provider: resolvedProvider,
+    needsConnection: providerNeedsConnection(value.connections, resolvedProvider, resolvedMode),
     loading: !value.connections || (mode == null && value.mode == null),
     refresh: refreshStatus,
   };
 }
 
 export function openProviderConnect(options) {
+  if(options.provider === "deepseek" && status.routes?.[options.lane || "text"]) options={...options,provider:status.routes[options.lane || "text"].provider};
   const detail = connectionRequest(options);
   if (!detail) return false;
   window.dispatchEvent(new CustomEvent(providerConnectEvent, { detail }));
   return true;
 }
 
-export function ConnectProviderButton({ provider, feature, returnLabel, className = "", children, ...props }) {
-  const request = connectionRequest({ provider, feature, returnLabel });
+export function ConnectProviderButton({ provider, lane, feature, returnLabel, className = "", children, ...props }) {
+  const {provider:resolvedProvider} = useProviderConnection(provider,undefined,lane);
+  const request = connectionRequest({ provider:resolvedProvider, feature, returnLabel });
   if (!request) return null;
   const name = providerDefinitions.find((item) => item.id === request.provider)?.name;
   return <button type="button" className={`provider-connect-button ${className}`}
     title={`Connect ${name}${feature ? ` for ${feature}` : ""}`}
     aria-label={`Connect ${name}${feature ? ` for ${feature}` : ""}`}
-    {...props} onClick={(event) => { event.stopPropagation(); openProviderConnect(request); }}>
+    {...props} onClick={(event) => { event.stopPropagation(); openProviderConnect({...request,lane}); }}>
     <PlugZap size={16} aria-hidden="true" />{children || "Connect"}
   </button>;
 }
 
-export function ProviderAction({ provider, mode, feature, returnLabel, children, className }) {
-  const { needsConnection } = useProviderConnection(provider, mode);
+export function ProviderAction({ provider, mode, lane, feature, returnLabel, children, className }) {
+  const { needsConnection } = useProviderConnection(provider, mode, lane);
   return needsConnection
-    ? <ConnectProviderButton {...{ provider, feature, returnLabel, className }} />
+    ? <ConnectProviderButton {...{ provider, lane, feature, returnLabel, className }} />
     : children;
 }
 
@@ -117,7 +127,7 @@ export function ProviderConnectHost() {
     if (request && !dialog.current.open) dialog.current.showModal();
   }, [request]);
   if (!request) return null;
-  return createPortal(<dialog ref={dialog} className="provider-connect-dialog" aria-label="Connect an AI tool"
+  return createPortal(<dialog ref={dialog} className="provider-connect-dialog" aria-label="Connect a provider"
     onCancel={(event) => { event.preventDefault(); close(); }}
     onKeyDown={(event) => {
       // Editor shortcuts must never run underneath this focused guide.

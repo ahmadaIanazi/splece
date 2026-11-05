@@ -1,3 +1,4 @@
+import { supportsSoundReference } from "../../shared/video-sound-continuity.mjs";
 import { createHash } from "node:crypto";
 import { ProviderError } from "../providers.mjs";
 import { providerTransport } from "../security.mjs";
@@ -8,7 +9,7 @@ export const falEndpoints = [
   "image-to-video",
   "reference-to-video",
 ].map((mode) => `alibaba/wan-3.0/${mode}`);
-const revision = "fal-wan3-v1";
+const revision = "fal-wan3-v2";
 function inputSchema(schema) {
   return Object.values(schema?.components?.schemas || {}).find(
     (s) => s.properties?.prompt && s.properties?.resolution,
@@ -39,6 +40,7 @@ export function falModel(
     "start_image_url",
     "end_image_url",
     "reference_image_urls",
+    "reference_audio_urls",
   ];
   const schemaChanged =
     !!schema &&
@@ -101,6 +103,7 @@ export function falModel(
     endFrame: frames && (!schema || !!props.end_image_url),
     audio: true,
     audioConfigurable: true,
+    audioReferences: refs && (!schema || !!props.reference_audio_urls),
     promptLimit: prompt.maxLength ?? 20000,
     referenceRoles: referenceRoles.map(r => r.id),
     constraints: {
@@ -120,7 +123,7 @@ export function falModel(
       audio: true,
     },
     source: `https://fal.ai/models/${endpoint}/api`,
-    verifiedAt: "2026-10-22",
+    verifiedAt: "2026-10-26",
     capabilityVersion: revision,
     catalogVersion: createHash("sha256")
       .update(JSON.stringify({ revision, schema, metadata }))
@@ -149,11 +152,16 @@ export function falPayload(payload, model) {
     if (payload.end_image_url) result.end_image_url = payload.end_image_url;
   } else if (model.referenceMode === "flat") {
     if (
-      !payload.reference_image_urls?.length ||
-      payload.reference_image_urls.length > model.maxReferences
+      (!payload.reference_image_urls?.length && !payload.reference_audio_urls?.length) ||
+      (payload.reference_image_urls?.length || 0) > model.maxReferences
     )
-      throw Error("Wan reference mode needs 1–10 reference images.");
-    result.reference_image_urls = payload.reference_image_urls;
+      throw Error("Wan reference mode needs an image or audio reference, with at most 10 images.");
+    if (payload.reference_image_urls?.length) result.reference_image_urls = payload.reference_image_urls;
+  }
+  if (payload.reference_audio_urls?.length) {
+    if (!supportsSoundReference(model) || !result.audio || payload.reference_audio_urls.length !== 1)
+      throw Error("Sound continuation needs one audio sample and native audio on Wan References.");
+    result.reference_audio_urls = payload.reference_audio_urls;
   }
   if (
     payload.elements?.length ||

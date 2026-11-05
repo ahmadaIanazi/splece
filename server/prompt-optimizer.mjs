@@ -133,7 +133,7 @@ export function optimizerEstimate(input, config, at = Date.now()) {
   return {
     executionMode: test ? "test" : "live",
     textModel: config.model,
-    provider: "deepseek",
+    provider: config.provider || "deepseek",
     profile: resolvePromptProfile(input.videoCapabilities),
     inputTokens,
     outputTokens,
@@ -143,7 +143,7 @@ export function optimizerEstimate(input, config, at = Date.now()) {
       : low && high
         ? { min: low.low, max: high.low * 2, currency: "USD" }
         : null,
-    pricingSource: DEEPSEEK_RATE_SOURCE,
+    pricingSource: config.provider && config.provider!=="deepseek" ? null : DEEPSEEK_RATE_SOURCE,
     pricingVerifiedOn: "2026-10-23",
     note: test
       ? "Offline optimization. No AI request or charge."

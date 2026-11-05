@@ -8,6 +8,7 @@ import {openStore} from '../server/store.mjs';
 import {newProject} from '../server/domain.mjs';
 import {upgradeProject} from '../shared/studio.mjs';
 import {credentials} from '../server/connections.mjs';
+import {updateRouting} from '../server/ai-routing.mjs';
 import {activeStudioJobs} from '../server/launcher.mjs';
 async function setup(t,options={}){
  const data=await fs.mkdtemp(path.join(os.tmpdir(),'splece-photos-')),store=openStore(path.join(data,'db.sqlite')),p=upgradeProject(newProject('Photo Test'));
@@ -25,20 +26,20 @@ test('Photo input validates ownership and mode before work',async t=>{
  await assert.rejects(service.quote(p.id,['foreign']),/project/);await assert.rejects(service.quote(p.id,['one','one']),/one or two/);
  const q=await service.quote(p.id,['one']);mode='live';await assert.rejects(service.analyze(p.id,q.id),/Mode changed/);assert.equal(service.list(p.id)[0].state,'quoted');
 });
-test('Live vision discovers capability, sends actual bounded images, validates output, and double-click does not resubmit',async t=>{
+test('Selected Text vision model sends actual bounded images, validates output, and double-click does not resubmit',async t=>{
  let calls=[];const {p,service,data}=await setup(t,{mode:async()=> 'live',render:async args=>fs.writeFile(args.at(-1),'normalized-image'),transport:async(url,opts)=>{
  calls.push([url,opts]);if(url.includes('/models'))return Response.json({data:[{id:'text-only',model_spec:{capabilities:{}}},{id:'vision',model_spec:{capabilities:{supportsVision:true}}}]});
  return Response.json({model:'vision',usage:{prompt_tokens:500,completion_tokens:30},choices:[{message:{content:'A quiet riverside path in soft morning light.'}}]});
- }});await credentials(data,'venice').saveKey('test-only');
+ }});await credentials(data,'venice').saveKey('test-only');await fs.writeFile(path.join(data,'venice-text-models.json'),JSON.stringify({models:[{id:'vision',vision:true}]}));await updateRouting(data,{text:{enabled:true,provider:'venice',model:'vision'}});
  const q=await service.quote(p.id,['one','two']);assert.equal(q.model,'vision');
  await Promise.all([service.analyze(p.id,q.id),service.analyze(p.id,q.id)]);
- const j=service.list(p.id)[0];assert.equal(j.state,'ready');assert.equal(calls.length,3);assert.equal(j.usage.length,2);
- const payload=JSON.parse(calls[1][1].body);assert.equal(payload.messages[1].content[1].image_url.url,'data:image/jpeg;base64,'+Buffer.from('normalized-image').toString('base64'));assert.match(j.result.writing,/riverside/);
+ const j=service.list(p.id)[0];assert.equal(j.state,'ready');assert.equal(calls.length,2);assert.equal(j.usage.length,2);
+ const payload=JSON.parse(calls[0][1].body);assert.equal(payload.messages[1].content[1].image_url.url,'data:image/jpeg;base64,'+Buffer.from('normalized-image').toString('base64'));assert.match(j.result.writing,/riverside/);
 });
 test('Failed analysis never retries a paid request automatically',async t=>{
  let n=0;const {p,service,data}=await setup(t,{mode:async()=> 'live',render:async args=>fs.writeFile(args.at(-1),'test'),transport:async(url)=>{
  if(url.includes('/models'))return Response.json({data:[{id:'vision',model_spec:{capabilities:{supportsVision:true}}}]});n++;return new Response('',{status:422});
- }});await credentials(data,'venice').saveKey('test-only');const q=await service.quote(p.id,['one']);const j=await service.analyze(p.id,q.id);assert.equal(j.state,'failed');assert.match(j.error,/422/);await service.analyze(p.id,q.id);assert.equal(n,1);assert.equal(j.attempted,true);
+ }});await credentials(data,'venice').saveKey('test-only');await fs.writeFile(path.join(data,'venice-text-models.json'),JSON.stringify({models:[{id:'vision',vision:true}]}));await updateRouting(data,{text:{enabled:true,provider:'venice',model:'vision'}});const q=await service.quote(p.id,['one']);const j=await service.analyze(p.id,q.id);assert.equal(j.state,'failed');assert.match(j.error,/422/);await service.analyze(p.id,q.id);assert.equal(n,1);assert.equal(j.attempted,true);
 });
 test('Image timelines export full-length stills from the safe original, without needing the preview copy',async t=>{
  const {run,renderEpisode,probe}=await import('../server/media.mjs');
@@ -49,4 +50,12 @@ test('Image timelines export full-length stills from the safe original, without 
  const out=path.join(data,'export.mp4');
  await renderEpisode([{id:'still',start:0,in:2,duration:1,activeTake:m.id,takes:[m]}],()=>m,path.join(data,'renders'),out,{aspect:'16:9',resolution:'480p',fps:24});
  const info=await probe(out);assert.ok(info.duration>=.95);assert.ok((await fs.stat(original)).size>0);
+});
+
+test('A text-only selection rejects image analysis before dispatch',async t=>{
+ const {p,service,data}=await setup(t,{mode:async()=> 'live'});
+ await credentials(data,'openrouter').saveKey('test-only');
+ await fs.writeFile(path.join(data,'openrouter-text-models.json'),JSON.stringify({models:[{id:'text-only',vision:false}]}));
+ await updateRouting(data,{text:{enabled:true,provider:'openrouter',model:'text-only'}});
+ await assert.rejects(service.quote(p.id,['one']),/vision-capable/);
 });

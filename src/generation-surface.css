@@ -1,0 +1,298 @@
+.generation-fill {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: #101929;
+  color: #f3f7ff;
+  border-radius: inherit;
+  text-align: left;
+}
+.generation-atmosphere,
+.generation-fill-level,
+.generation-fill-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.generation-atmosphere {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 20% 80%, #427b9c66, transparent 65%),
+    radial-gradient(ellipse at 80% 20%, #6562bb55, transparent 65%);
+}
+.generation-fill-level {
+  right: auto;
+  width: var(--generation-fill);
+  background: linear-gradient(110deg, #3479c577, #8cbaff66);
+  border-right: 1px solid #bfdeff77;
+  transition: width 1s linear;
+}
+.generation-fill[data-indeterminate="true"] .generation-fill-level {
+  width: 45%;
+  border: 0;
+  background: linear-gradient(90deg, transparent, #7bafff40, transparent);
+  animation: generation-sweep 3.5s ease-in-out infinite alternate;
+}
+.generation-fill-shade {
+  background: linear-gradient(180deg, #080e1b20, #080e1b78);
+}
+.generation-fill-content {
+  position: relative;
+  z-index: 1;
+}
+.generation-fill-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.generation-fill-status strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.generation-fill-status > span {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.generation-fill-status small {
+  font-size: inherit;
+}
+.generation-fill .generation-fill-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.generation-fill-timeline {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+.generation-fill-timeline .generation-fill-content {
+  width: 100%;
+}
+.generation-fill-timeline .generation-fill-status {
+  font-size: 11px;
+}
+.generation-fill-count {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: #d0ddf1;
+}
+.generation-fill-clip-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: #c1cfe4;
+}
+.generation-fill-timeline .generation-orbit {
+  display: none;
+}
+.take-face > .slot-progress.generation-slot-fill {
+  inset: 0;
+  border-radius: inherit;
+}
+.take-pending.generation-pending-fill {
+  padding: 0;
+  border-style: solid;
+}
+.composition-stage > .generation-fill-preview {
+  position: absolute;
+  inset: 0;
+}
+.generation-fill-preview {
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+.generation-fill-preview .generation-fill-content {
+  width: min(500px, 78%);
+  padding: 35px 0 70px;
+  max-height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+.generation-fill-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid #dceaff33;
+  border-radius: 18px;
+  background: #d5e6ff12;
+  margin-bottom: 26px;
+}
+.generation-fill-preview .generation-fill-eyebrow {
+  color: #d0def5;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+.generation-fill-preview h2 {
+  font-size: clamp(24px, 4.5cqw, 48px);
+  line-height: 1.15;
+  font-weight: 600;
+  margin: 0 0 32px;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.generation-fill-preview .generation-fill-status {
+  font-size: 15px;
+}
+.generation-fill-preview .generation-fill-status b {
+  font-size: 24px;
+  font-weight: 500;
+}
+.generation-fill-preview .generation-fill-status small {
+  font-size: 11px;
+  color: #d0def5;
+}
+.generation-fill-details {
+  border-top: 1px solid #dceaff2b;
+  margin-top: 14px;
+  padding-top: 14px;
+  font-size: 13px;
+  color: #e1eafb;
+  line-height: 1.6;
+}
+.generation-fill-details p {
+  margin: 0 0 4px;
+}
+.generation-fill-details small {
+  font-size: 11px;
+  color: #c1cfe4;
+}
+.generation-fill-details .generation-fill-error {
+  color: #ffcfca;
+  max-height: 100px;
+  overflow: auto;
+}
+.generation-fill-footnote {
+  position: absolute;
+  bottom: 22px;
+  left: 6%;
+  right: 6%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: #c1cfe4;
+  font-size: 10px;
+}
+.generation-orbit {
+  position: absolute;
+  width: 75%;
+  height: 100%;
+  left: 30%;
+  top: -25%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 45deg,
+    #719be966,
+    #bc91c033,
+    #7cdfd133,
+    #719be966
+  );
+  filter: blur(55px);
+}
+.generation-fill[data-active="true"] .generation-orbit {
+  animation: generation-orbit 24s linear infinite;
+}
+.generation-reference {
+  position: absolute;
+  width: 42%;
+  height: 60%;
+  object-fit: cover;
+  left: calc(8% + var(--reference-index) * 12%);
+  top: calc(8% + var(--reference-index) * 5%);
+  border-radius: 28%;
+  filter: blur(14px) saturate(0.95);
+  opacity: 0.48;
+  transform: rotate(calc(var(--reference-index) * 32deg - 22deg)) scale(1.1);
+}
+.generation-fill[data-active="true"] .generation-reference {
+  animation: generation-drift 18s ease-in-out infinite alternate;
+  animation-delay: calc(var(--reference-index) * -4s);
+}
+.generation-reference:nth-of-type(1) {
+  left: -10%;
+  top: -15%;
+}
+.generation-reference:nth-of-type(2) {
+  left: 68%;
+  top: 12%;
+}
+.generation-reference:nth-of-type(3) {
+  left: 32%;
+  top: 72%;
+}
+.generation-fill-preview .generation-fill-shade {
+  background:
+    radial-gradient(ellipse at center, #080e1baa, #080e1b22 85%),
+    linear-gradient(0deg, #080e1bcc, transparent 40%);
+}
+.generation-fill[data-attention="true"] .generation-atmosphere {
+  background: radial-gradient(ellipse at 20% 80%, #995a5844, transparent 75%);
+}
+.generation-fill[data-active="false"] .generation-orbit {
+  opacity: 0.25;
+}
+@keyframes generation-sweep {
+  from {
+    transform: translateX(-90%);
+  }
+  to {
+    transform: translateX(225%);
+  }
+}
+@keyframes generation-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes generation-drift {
+  to {
+    translate: -8% 12%;
+    rotate: 16deg;
+    scale: 1.16;
+  }
+}
+@container (max-height: 400px) {
+  .generation-fill-preview .generation-fill-content {
+    padding: 16px 0 45px;
+  }
+  .generation-fill-symbol {
+    display: none;
+  }
+  .generation-fill-preview h2 {
+    margin-bottom: 14px;
+    font-size: 26px;
+  }
+  .generation-fill-footnote {
+    bottom: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .generation-fill *,
+  .generation-fill *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+  .generation-fill[data-indeterminate="true"] .generation-fill-level {
+    width: 100%;
+    opacity: 0.3;
+  }
+}

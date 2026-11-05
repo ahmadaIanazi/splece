@@ -28,6 +28,16 @@ export function resolveProjectPath(folder, relative) {
     throw new Error("Project path escapes its folder");
   return resolved;
 }
+// Effect artifacts are durable project files, not disposable preview cache entries.
+export function effectPortablePaths(job, folder, resolve = false) {
+  const copy = structuredClone(job);
+  const convert = value => resolve ? resolveProjectPath(folder, value) : portablePaths({ path: value }, folder).path;
+  for (const key of ['folder', 'sourcePath']) if (copy[key]) copy[key] = convert(copy[key]);
+  for (const stage of copy.stages || []) for (const key of ['artifact', 'snapshot']) if (stage[key]) stage[key] = convert(stage[key]);
+  for (const source of copy.frameSources || []) source.path = convert(source.path);
+  for (const stage of copy.stages || []) for (const key of ['framePaths','frameSnapshots']) if (stage[key]) stage[key] = stage[key].map(convert);
+  return resolve ? copy : portablePaths(copy, folder);
+}
 export function createPortableStore(store) {
   const chains = new Map();
   async function checkpoint(projectId) {
@@ -58,6 +68,7 @@ export function createPortableStore(store) {
       assetAnalyses: store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='asset_analyses'").get() ? store.db.prepare("SELECT body FROM asset_analyses WHERE projectId=? AND state != 'quoted'").all(projectId).map(r=>JSON.parse(r.body)) : [],
       photoAnalyses: store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='photo_analyses'").get() ? store.db.prepare("SELECT body FROM photo_analyses WHERE projectId=? AND state != 'quoted'").all(projectId).map(r=>JSON.parse(r.body)) : [],
       imageJobs: store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='image_jobs'").get() ? store.db.prepare("SELECT body FROM image_jobs WHERE projectId=?").all(projectId).map(r=>portablePaths(JSON.parse(r.body),p.folder)) : [],
+      effectJobs: store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='effect_jobs'").get() ? store.db.prepare("SELECT body FROM effect_jobs WHERE projectId=?").all(projectId).map(r=>effectPortablePaths(JSON.parse(r.body),p.folder)) : [],
       lipSyncJobs: store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='lip_sync_jobs'").get() ? store.db.prepare("SELECT body FROM lip_sync_jobs WHERE projectId=?").all(projectId).map(r=>portablePaths(JSON.parse(r.body),p.folder)) : [],
       soundtrackRuns: store.db
         .prepare(
@@ -141,6 +152,7 @@ export function createPortableStore(store) {
         ...(bundle.smartJobs || []).map((j) => [j.id, id()]),
         ...(bundle.storyJobs || []).map((j) => [j.id, id()]),
         ...(bundle.soundtrackRuns || []).map((j) => [j.id, id()]),
+        ...(bundle.effectJobs || []).map((j) => [j.id, id()]),
         ...(bundle.lipSyncJobs || []).map((j) => [j.id, id()]),
         ...(bundle.imageJobs || []).map((j) => [j.id, id()]),
         ...(bundle.assetAnalyses || []).map((j) => [j.id, id()]),
@@ -275,6 +287,21 @@ export function createPortableStore(store) {
         if(j.media) j.media=store.media(j.media.id)||j.media;
         if(!["ready","failed","cancelled","submission_uncertain"].includes(j.state)) {j.state="failed"; j.error="Imported unfinished image. Retrieve its existing provider result before generating again.";}
         store.db.prepare("INSERT OR REPLACE INTO image_jobs VALUES(?,?,?,?)").run(j.id,p.id,j.state,JSON.stringify(j));
+      }
+    }
+    if (bundle.effectJobs?.length) {
+      store.db.exec("CREATE TABLE IF NOT EXISTS effect_jobs(id TEXT PRIMARY KEY,projectId TEXT,state TEXT,body TEXT NOT NULL)");
+      for (const raw of bundle.effectJobs) {
+        const j = effectPortablePaths(raw, folder, true);
+        j.projectId = p.id;
+        if (j.media) j.media = store.media(j.media.id) || j.media;
+        j.signature = JSON.stringify(j.input);
+        if (!["ready", "cancelled", "needs_attention"].includes(j.state)) {
+          j.state = "needs_attention"; j.error = "Imported unfinished effect. Continue the saved stages; no automatic provider submission.";
+          const stage = j.stages.find(s => s.state !== 'ready');
+          if (stage?.state === 'submitting' && !stage.providerJobId) stage.state = 'submission_uncertain';
+        }
+        store.db.prepare("INSERT OR REPLACE INTO effect_jobs VALUES(?,?,?,?)").run(j.id,p.id,j.state,JSON.stringify(j));
       }
     }
     if (bundle.lipSyncJobs?.length) {

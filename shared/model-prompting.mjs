@@ -28,6 +28,7 @@ const profiles = [
         "Alibaba video prompt guide",
         "https://help.aliyun.com/en/model-studio/text-to-video-prompt",
       ),
+      source("Wan 3.0 native sound and reference prompting", "https://www.alibabacloud.com/help/en/model-studio/wan3-video-generation-prompt-guide"),
     ],
   },
   {

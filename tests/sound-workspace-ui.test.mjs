@@ -85,7 +85,7 @@ test("Sound opens with three choices, one generation action and no duplicated re
   });
   const html = panel(project, sound([run]));
   assert.match(html, /aria-label="Sound layer"/);
-  for (const title of ["Effects", "Ambience", "Dialogue"])
+  for (const title of ["Sound effects", "Ambience", "Dialogue"])
     assert.match(html, new RegExp(`<strong>${title}</strong>`));
   assert.equal((html.match(/>Generate<\/button>/g) || []).length, 1);
   assert.doesNotMatch(

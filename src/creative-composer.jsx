@@ -1,3 +1,6 @@
+import { qualityResolution, qualityPixels } from "../shared/generation-quality.mjs";
+import { GenerationDuration } from "./generation-duration";
+import { VideoSoundComposer } from "./video-sound-composer";
 import { DialogueStream } from "./dialogue-stream";
 import { ProviderAction } from "./provider-connect";
 import { hasComposerWriting } from "../shared/composer-sequence.mjs";
@@ -42,7 +45,6 @@ import { automationLabels } from "./components";
 import { api, uid, tc } from "./state";
 import {
   insertComposerReference,
-  supportedComposerDuration,
 } from "../shared/composer-writing.mjs";
 
 function Tool({ icon: Glyph, label, children, ...props }) {
@@ -57,7 +59,7 @@ function Prose(props) {
   return <MentionInput autoGrow {...props} />;
 }
 
-function Companion({ anchor, title, onClose, children }) {
+function Companion({ anchor, title, onClose, children, roomy = false }) {
   const [position, setPosition] = useState(null);
   useLayoutEffect(() => {
     const place = () => {
@@ -71,7 +73,7 @@ function Companion({ anchor, title, onClose, children }) {
         width: fits ? width : Math.min(width, r.width),
         height: Math.max(
           220,
-          Math.min(r.height, window.innerHeight - r.top - 16),
+          Math.min(roomy ? Math.max(r.height, 560) : r.height, window.innerHeight - r.top - 16),
         ),
       });
     };
@@ -83,7 +85,7 @@ function Companion({ anchor, title, onClose, children }) {
       ro.disconnect();
       window.removeEventListener("resize", place);
     };
-  }, [anchor]);
+  }, [anchor, roomy]);
   return createPortal(
     <aside
       className="composer-companion"
@@ -187,6 +189,7 @@ export function CreativeComposer({
       if (composerAlive.current) setFrameUploading(false);
     }
   }
+  const [soundMode, setSoundMode] = useState(false);
   const [activeScene, setActiveScene] = useState(draft.scenes[0]?.id),
     [camera, setCamera] = useState(null),
     [settingsOpen, setSettingsOpen] = useState(false),
@@ -205,6 +208,17 @@ export function CreativeComposer({
     ].includes(view)
       ? view
       : null;
+  const generationQuality = draft.settings.generationQuality || 'draft';
+  const qualityOptions = Object.fromEntries(['draft','final'].map(q=>[q,qualityResolution(p.settings.generationPresets,model,q)]));
+  const chooseQuality = quality => {
+    setQuote(null);
+    editDraft(d=>{d.settings.generationQuality=quality; const resolution=qualityOptions[quality]; if(resolution)d.settings.resolution=resolution;});
+  };
+  useEffect(()=>{
+    // New drafts and model changes start from the selected preset, never another model.
+    if (draft.settings.generationQuality && draft.settings.resolution === qualityOptions[generationQuality]) return;
+    chooseQuality(generationQuality);
+  }, [draft.id, model?.id, JSON.stringify(p.settings.generationPresets)]);
   const optimizer = usePromptOptimizer({ project: p, draft, model, executionMode: videoMode, flush });
   const attached = p.assets.filter((a) => draft.referenceIds.includes(a.id));
   const currentScene =
@@ -345,6 +359,7 @@ export function CreativeComposer({
             icon={reverse ? ArrowLeft : SquareCode}
             label={reverse ? "Back to writing" : "Under the hood"}
             aria-pressed={reverse}
+            title={reverse ? "Back to writing" : problem ? `Under the hood · ${problem}` : "Under the hood"}
             onClick={() => {
               setSettingsOpen(false);
               setCamera(null);
@@ -353,11 +368,39 @@ export function CreativeComposer({
           />
         }
       />
+      {!reverse && !soundMode && (
+        <section className="composer-timing-bar" aria-label="Clip length and frames">
+          {["start", "end"].map((key, i) => {
+            const candidate = prepared.boundaries?.[key] || prepared[
+              key === "start" ? "continuityReference" : "continuityEndReference"
+            ];
+            const preview = boundaryPreview(candidate);
+            return <React.Fragment key={key}>
+              {i === 1 && <div className="composer-timing-duration">
+                <button className="creative-duration" aria-label="Timeline placement and duration"
+                  aria-expanded={settingsOpen} onClick={() => { closePanel(); setSettingsOpen(!settingsOpen); }}>
+                  {draft.settings.duration}s
+                  {plannedLength != null && plannedLength !== draft.settings.duration && <small> · plan {plannedLength}s</small>}
+                </button>
+                <GenerationDuration value={draft.settings.duration} durations={durations} onChange={onDuration} disabled={!!draft.repair} />
+              </div>}
+              <button className={`composer-boundary-button ${key}`} data-frame-boundary={key}
+                title={candidate && !prepared.boundaries?.[key] ? "Sent as a visual reference with this model, not an exact frame pin." : undefined}
+                aria-label={`${preview ? "Change" : "Add"} ${key} frame`} aria-expanded={panel === key}
+                onClick={() => togglePanel(key)}>
+                <span className="composer-boundary-preview">{preview ? <img alt="" src={preview}/> : <Plus size={15}/>}</span>
+                <span>{key === "start" ? "Start frame" : "End frame"}</span>
+              </button>
+            </React.Fragment>;
+          })}
+        </section>
+      )}
       {libraryError && (
         <p role="alert" className="error">
           {libraryError}
         </p>
       )}
+      <div className="composer-content-scroll">
       <div className="creative-work" hidden={reverse}>
         <div
           className={`creative-writing ${optimizer.busy ? "is-optimizing" : ""}`}
@@ -421,6 +464,9 @@ export function CreativeComposer({
             onAddShot={addShot}
             onAssets={() => togglePanel("references")}
             onLibrary={() => togglePanel("recipes")}
+            soundMode={soundMode}
+            onSound={() => { closePanel(); setCamera(null); setSoundMode(!soundMode); }}
+            soundComposer={<VideoSoundComposer key={draft.id} project={p} draft={draft} model={model} editDraft={editDraft} update={update} onBack={() => setSoundMode(false)} />}
             onMention={attach}
             onDropAsset={insertAsset}
             onCursor={(range) => { cursor.current = { sceneId: currentScene?.id, ...range }; }}
@@ -449,7 +495,7 @@ export function CreativeComposer({
         </div>
 
       </div>
-      {!reverse && draft.optimizeOnGenerate && <OptimizerStatus optimizer={optimizer} draft={draft} modelName={modelTitle(model)} change={editDraft} />}
+      {!reverse && draft.optimizeOnGenerate && <OptimizerStatus feedbackOnly optimizer={optimizer} draft={draft} modelName={modelTitle(model)} change={editDraft} />}
       {reverse && (
         <div className="creative-review">
           <nav aria-label="Under the hood views">
@@ -558,146 +604,8 @@ export function CreativeComposer({
           </div>
         </div>
       )}
-      {!reverse && (
-        <details className="stream-clip-settings">
-        <summary><Clock3 size={14} /> Clip length & frames <span>{draft.settings.duration}s</span><ChevronDown size={14} /></summary>
-        <div className="creative-timing">
-          <div className="creative-time-heading">
-            {["start", "end"].map((key, i) => {
-              const candidate =
-                prepared.boundaries?.[key] ||
-                prepared[
-                  key === "start"
-                    ? "continuityReference"
-                    : "continuityEndReference"
-                ];
-              const f = boundaryPreview(candidate) ? candidate : null;
-              return (
-                <React.Fragment key={key}>
-                  {i === 1 && (
-                    <button
-                      className="creative-duration"
-                      aria-label="Timeline placement and duration"
-                      onClick={() => {
-                        closePanel();
-                        setSettingsOpen(!settingsOpen);
-                      }}
-                    >
-                      {draft.settings.duration}s
-                      {plannedLength != null &&
-                        plannedLength !== draft.settings.duration && (
-                          <small> · plan {plannedLength}s</small>
-                        )}
-                    </button>
-                  )}
-                  <button
-                    className={`creative-frame ${key}`}
-                    data-frame-boundary={key}
-                    aria-label={`${f ? "Change" : "Add"} ${key} frame`}
-                    aria-expanded={panel === key}
-                    onClick={() => togglePanel(key)}
-                  >
-                    {f ? (
-                      <img
-                        alt=""
-                        src={boundaryPreview(f)}
-                      />
-                    ) : (
-                      <Plus size={20} />
-                    )}
-                    <span>{key === "start" ? "Start frame" : "End frame"}</span>
-                    {f && <ChevronDown size={11} />}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </div>
-          <div
-            className="creative-ruler"
-            style={{
-              "--trim": `${Math.min(100, (100 * draft.settings.duration) / max)}%`,
-            }}
-          >
-            <div className="creative-ruler-band" />
-            <div className="creative-ruler-ticks" />
-            {[0, ...durations]
-              .filter((v, i, a) => a.indexOf(v) === i)
-              .map((v) => (
-                <span
-                  key={v}
-                  className="creative-ruler-label"
-                  style={{ left: `${(100 * v) / max}%` }}
-                >
-                  {v}
-                  {v === max ? "s" : ""}
-                </span>
-              ))}
-            <i />
-            <input
-              type="range"
-              aria-label="Clip generation duration"
-              onKeyDown={(e) => {
-                if (
-                  ![
-                    "ArrowLeft",
-                    "ArrowRight",
-                    "ArrowUp",
-                    "ArrowDown",
-                    "Home",
-                    "End",
-                  ].includes(e.key)
-                )
-                  return;
-                e.preventDefault();
-                const i = durations.indexOf(draft.settings.duration);
-                const next =
-                  e.key === "Home"
-                    ? durations[0]
-                    : e.key === "End"
-                      ? durations.at(-1)
-                      : durations[
-                          Math.max(
-                            0,
-                            Math.min(
-                              durations.length - 1,
-                              i +
-                                (["ArrowLeft", "ArrowDown"].includes(e.key)
-                                  ? -1
-                                  : 1),
-                            ),
-                          )
-                        ];
-                if (next != null && next !== draft.settings.duration)
-                  onDuration(next);
-              }}
-              aria-valuetext={`${draft.settings.duration} seconds`}
-              min={0}
-              max={max}
-              step="0.1"
-              value={draft.settings.duration}
-              disabled={durations.length < 2 || !!draft.repair}
-              onChange={(e) => {
-                const n = supportedComposerDuration(+e.target.value, durations);
-                if (n !== null && n !== draft.settings.duration) onDuration(n);
-              }}
-            />
-          </div>
-        </div>
-        </details>
-      )}
+      </div>
       <footer className="creative-footer">
-        {problem && (
-          <button
-            className={`composer-readiness ${empty && !validation.errors.length ? "quiet" : ""}`}
-            onClick={() => {
-              setView("prepared");
-              setReviewTab("text");
-            }}
-          >
-            {problem}
-            <SquareCode size={12} />
-          </button>
-        )}
         <div className="creative-generate-row">
           <button
             className="creative-specs"
@@ -715,7 +623,7 @@ export function CreativeComposer({
                 {[
                   draft.settings.resolution,
                   draft.settings.aspect,
-                  `${draft.quantity || 1} take${draft.quantity > 1 ? "s" : ""}`,
+                  `${draft.quantity || 1} version${draft.quantity > 1 ? "s" : ""}`,
                   model?.audioConfigurable
                     ? draft.settings.audio
                       ? "Audio on"
@@ -726,7 +634,7 @@ export function CreativeComposer({
                   .join(" · ")}
               </small>
             </span>
-            <ChevronUp size={12} />
+            <ChevronDown size={12} style={{transform: settingsOpen ? "rotate(180deg)" : undefined}} />
           </button>
           <button type="button" className="model-adaptation-toggle" role="switch" aria-label="Optimize prompt for video model" aria-checked={!!draft.optimizeOnGenerate}
             disabled={submitting || optimizer.busy} title={`Adapt the submitted copy for ${modelTitle(model)} · your writing stays unchanged`}
@@ -735,6 +643,9 @@ export function CreativeComposer({
           </button>
           <ProviderAction provider={model?.providerId || model?.provider || "venice"} mode={videoMode} feature="video generation" returnLabel="Back to my prompt">
           <HoldGenerate
+            quality={generationQuality}
+            onQualityChange={chooseQuality}
+            qualityOptions={qualityOptions}
             enabled={holdToGenerate}
             disabled={blocked}
             busy={submitting}
@@ -758,6 +669,7 @@ export function CreativeComposer({
         <Companion
           key={panel || "settings"}
           anchor={root}
+          roomy={panel === "models"}
           title={
             {
               recipes: "Prompt library",
@@ -775,6 +687,8 @@ export function CreativeComposer({
           }}
         >
           {panel === "recipes" && <RecoveryBoundary onClose={closePanel}><Suspense fallback={<p>Opening prompt library…</p>}><LazyPromptLibrary project={p} draft={draft} change={update} onApplied={closePanel} /></Suspense></RecoveryBoundary>}
+          {draft.optimizeOnGenerate && ((!panel && settingsOpen) || panel === "models") &&
+            <OptimizerStatus optimizer={optimizer} draft={draft} modelName={modelTitle(model)} change={editDraft} />}
           {settingsOpen && !panel && (
             <div className="compact-generation-setup">
               <button
@@ -801,7 +715,7 @@ export function CreativeComposer({
                             key={v}
                             aria-pressed={draft.settings[key] === v}
                             onClick={() =>
-                              editDraft((d) => (d.settings[key] = v))
+                              editDraft((d) => { d.settings[key] = v; if(key === "resolution") d.settings.generationQuality = qualityPixels(v) > qualityPixels(qualityOptions.draft || v) ? "final" : "draft"; })
                             }
                           >
                             {v}
@@ -815,10 +729,10 @@ export function CreativeComposer({
                 ))}
               </div>
               <div className="setup-takes">
-                <span>Takes</span>
+                <span>Versions</span>
                 <div>
                   <button
-                    aria-label="Fewer takes"
+                    aria-label="Fewer versions"
                     disabled={(draft.quantity || 1) <= 1}
                     onClick={() =>
                       editDraft(
@@ -833,7 +747,7 @@ export function CreativeComposer({
                     {draft.quantity || 1}
                   </output>
                   <button
-                    aria-label="More takes"
+                    aria-label="More versions"
                     disabled={draft.quantity >= 12}
                     onClick={() =>
                       editDraft(
@@ -897,6 +811,7 @@ export function CreativeComposer({
                   {videoMode !== "demo" && " · est."}
                 </span>
               </div>
+              {validation.errors.length > 0 && <p className="model-fit-reason" role="alert">{validation.errors[0].message}</p>}
               <button
                 className="save-model-default"
                 onClick={saveVideoDefaults}

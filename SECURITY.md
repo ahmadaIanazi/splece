@@ -1,9 +1,9 @@
 # Security reporting
 
-Do not post API keys, private projects, exploit details or signing credentials in public issues.
+Please report vulnerabilities privately through [GitHub Security Advisories](https://github.com/ahmadaIanazi/splece/security/advisories/new).
 
-Before the public repository opens, use a private contact method listed on the maintainer's GitHub profile: https://github.com/ahmadaIanazi. If none is available, open an issue containing only a request for a private security contact; do not include the vulnerability details. The public launch checklist requires enabling GitHub private vulnerability reporting before release.
+Include the source commit or app version, operating system, reproduction steps and likely impact. Use synthetic media and placeholder credentials. Do not publish API keys, private projects, exploit details or signing material in public issues.
 
-After private reporting is enabled on the public repository, use its Security → Report a vulnerability flow. Include the version, operating system, reproduction steps and impact without real credentials or personal media. This early beta has no promised response SLA or bug bounty.
+If the private report form is unavailable, use a private contact method on [the maintainer profile](https://github.com/ahmadaIanazi). If none is listed, open an issue containing only a request for a private security contact, without vulnerability details.
 
-Local storage does not make all input trusted. The application binds to loopback, restricts browser origins and uses a local session. Online AI sends selected inputs to external providers. Never disable these protections to simplify a test.
+This early beta has no promised response SLA or bug bounty. Local storage does not make all input trusted: the app binds to loopback, restricts browser origins and uses a local session. Online AI sends selected inputs to external providers. Preserve these protections when contributing or testing.

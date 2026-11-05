@@ -371,3 +371,21 @@ test("lip-sync uploads both prepared inputs and terminal rejection cannot be ret
     await s.tick();
     assert.equal(submits, 1);
   }));
+
+test("project dialogue queues separate clips but prevents a duplicate pass on the same clip", () =>
+  sandbox(async ({store,p,revision,service}) => {
+    const second=structuredClone(p.clips[0]);second.id="c2";second.start=2;p.clips.push(second);
+    const voice=structuredClone(p.audioClips[0]);voice.id="voice2";voice.start=2;
+    voice.soundtrack.sources=[soundSource(second)];p.audioClips.push(voice);
+    const saved=store.save(p,revision),s=service({adapterFactory:()=>{throw Error("No network in Test");}});
+    const submit=async(clipId,audioId,requestId)=>{
+      const quote=await s.estimate(p.id,{clipId,audioId});
+      return s.submit(p.id,{clipId,audioId,requestId,quoteId:quote.id,revision:saved});
+    };
+    const first=await submit("c","voice","first");
+    const next=await submit("c2","voice2","next");
+    assert.notEqual(first.id,next.id);
+    await assert.rejects(submit("c","voice","duplicate"),/already has a lip-sync pass/);
+    assert.equal(s.list(p.id).length,2);
+    s.close();
+  }));

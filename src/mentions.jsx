@@ -1,3 +1,5 @@
+import { ComposerPopover } from "./composer-popover";
+import { normalizeLookText } from "../shared/look-selection.mjs";
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { Check, UserRound } from "lucide-react";
 export function MentionInput({
@@ -48,7 +50,7 @@ export function MentionInput({
         .filter(
           (a) =>
             a.kind !== "footage" &&
-            a.name.toLowerCase().includes(match.query.toLowerCase()),
+            normalizeLookText(a.name).includes(normalizeLookText(match.query.trim())),
         )
         .slice(0, 8)
     : [];
@@ -101,11 +103,7 @@ export function MentionInput({
         }}
       />
       {match && (
-        <div
-          role="listbox"
-          aria-label="Mention an asset"
-          className="mention-menu"
-        >
+        <ComposerPopover anchor={input.current} role="listbox" label="Mention an asset" onClose={() => setMatch(null)} activeIndex={active}>
           {suggestions.length ? (
             suggestions.map((a, i) => (
               <button
@@ -130,7 +128,7 @@ export function MentionInput({
           ) : (
             <small>No matching assets</small>
           )}
-        </div>
+        </ComposerPopover>
       )}
       {!!recognized.length && (
         <div className="recognized-mentions">

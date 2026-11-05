@@ -206,7 +206,7 @@ test("Story JSON rejects invalid parentage and mismatched end times; supports en
     20,
   );
 });
-test("Default-first multi-view character references and pose-grid roles survive prompt compilation", () => {
+test("A character contributes only the selected look; explicit alternate looks survive prompt compilation", () => {
   const p = newProject("Views"),
     d = p.drafts[0],
     a = {
@@ -228,12 +228,9 @@ test("Default-first multi-view character references and pose-grid roles survive 
   const compiled = compilePrompt(p, d, model);
   assert.deepEqual(
     compiled.bindings.map((b) => b.media[0].id),
-    ["front", "grid", "side"],
+    ["front"],
   );
-  assert.match(
-    compiled.text,
-    /@Image2 controls Mira only.*multiple views of the same character/,
-  );
+  assert.doesNotMatch(compiled.text, /@Image2/);
   a.variants = [
     {
       id: "coat",

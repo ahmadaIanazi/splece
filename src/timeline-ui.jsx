@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useRef } from "react";
+import { clipAudioGain, clipVolumePatch, toggleClipAudio } from "../shared/clip-audio.mjs";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import {
   MoreHorizontal,
   Layers,
@@ -273,11 +274,11 @@ export function ClipMixer({ clip, change, onAudio, onDetach, canDetach }) {
             <div className="mixer-volume">
               <button
                 aria-label={
-                  clip.mute ? "Unmute selected clip" : "Mute selected clip"
+                  clipAudioGain(clip) === 0 ? "Unmute selected clip" : "Mute selected clip"
                 }
-                onClick={() => change((c) => (c.mute = !c.mute))}
+                onClick={() => change(c => Object.assign(c, toggleClipAudio(c)))}
               >
-                {clip.mute ? <VolumeX size={17} /> : <Volume2 size={17} />}
+                {clipAudioGain(clip) === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}
               </button>
               <input
                 aria-label="Clip volume"
@@ -285,10 +286,10 @@ export function ClipMixer({ clip, change, onAudio, onDetach, canDetach }) {
                 min="0"
                 max="1"
                 step=".05"
-                value={clip.volume ?? 1}
-                onChange={(e) => change((c) => (c.volume = +e.target.value))}
+                value={clipAudioGain(clip)}
+                onChange={e => change(c => Object.assign(c, clipVolumePatch(e.target.value)))}
               />
-              <output>{Math.round((clip.volume ?? 1) * 100)}%</output>
+              <output>{Math.round(clipAudioGain(clip) * 100)}%</output>
             </div>
             <div className="mixer-fades">
               {["fadeIn", "fadeOut"].map((key) => (
@@ -330,6 +331,7 @@ export function TakeStack({
   plannedType,
   clip,
   media,
+  sound,
   job,
   jobs,
   zoom,
@@ -340,6 +342,17 @@ export function TakeStack({
   selected,
 }) {
   const idx = clip.takes.findIndex((t) => t.id === clip.activeTake);
+  const previousTake = useRef({media, idx});
+  const [transition, setTransition] = useState(null);
+  const versionMenu = useRef(null);
+  useEffect(() => {
+    const previous = previousTake.current;
+    previousTake.current = {media, idx};
+    if (!previous.media || !media || previous.media.id === media.id) return;
+    setTransition({previous: previous.media, direction: idx >= previous.idx ? 1 : -1});
+    const timeout = setTimeout(() => setTransition(null), 240);
+    return () => clearTimeout(timeout);
+  }, [media?.id, idx]);
   const activeJobs = jobs.filter((j) => !jobProgress(j).terminal);
   const status =
     activeJobs.at(-1) ||
@@ -354,56 +367,6 @@ export function TakeStack({
   );
   return (
     <>
-      {selected &&
-        clip.takes.length > 1 &&
-        [1, -1].map((direction) => {
-          const alternate =
-            clip.takes[
-              (idx + direction + clip.takes.length) % clip.takes.length
-            ];
-          // At either end of the stack, show only the existing adjacent take.
-          if (idx + direction < 0 || idx + direction >= clip.takes.length)
-            return null;
-          return (
-            <button
-              key={direction}
-              className={
-                "take-neighbor " + (direction === 1 ? "above" : "below")
-              }
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onTake(direction);
-              }}
-              aria-label={
-                (direction === 1
-                  ? "Preview newer take "
-                  : "Preview older take ") +
-                (idx + direction + 1)
-              }
-              title={
-                (direction === 1 ? "Newer" : "Older") +
-                " take · " +
-                tc(alternate.duration)
-              }
-            >
-              <img
-                alt=""
-                src={
-                  alternate.thumbnail ||
-                  `/api/media/${alternate.id}/frame?time=0`
-                }
-                draggable={false}
-              />
-              {direction === 1 ? (
-                <ChevronUp size={13} />
-              ) : (
-                <ChevronDown size={13} />
-              )}
-              <span>Take {idx + direction + 1}</span>
-            </button>
-          );
-        })}
       {Array.from({ length: depth }, (_, i) => (
         <div
           className="take-depth"
@@ -416,17 +379,36 @@ export function TakeStack({
       ))}
       {status && media && (
         <div
-          className="take-pending"
+          className="take-pending generation-pending-fill"
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <JobProgress job={status} compact inline />
-          <small>
-            {activeJobs.length > 1
-              ? `${activeJobs.length} new takes`
-              : "New take"}
-          </small>
+          <JobProgress job={status} surface="timeline" title="New take" count={activeJobs.length} />
         </div>
       )}
+      {media && <details className="take-version-picker" ref={versionMenu}
+        onPointerDown={event => event.stopPropagation()}
+        onClick={event => event.stopPropagation()}
+        onDoubleClick={event => event.stopPropagation()}
+        onWheel={event => event.stopPropagation()}
+        onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}
+        onKeyDown={event => {
+          event.stopPropagation();
+          if (event.key === "Escape") { event.preventDefault(); versionMenu.current.open = false; versionMenu.current.querySelector("summary")?.focus(); }
+        }}>
+        <summary aria-label={`Version ${idx + 1} of ${clip.takes.length}`} title="Choose a version">
+          <Layers size={11} aria-hidden="true"/><span>v{idx + 1}</span><ChevronDown size={11} aria-hidden="true"/>
+          {activeJobs.length > 0 && <span className="take-working">+{activeJobs.length}</span>}
+        </summary>
+        <div className="take-version-menu" aria-label="Clip versions">
+          <div className="take-version-options">
+            {clip.takes.map((take, i) => <button key={take.id} aria-label={`Use version ${i + 1}`} aria-pressed={i === idx}
+              onClick={() => { onTake(i - idx); versionMenu.current.open = false; versionMenu.current.querySelector("summary")?.focus(); }}>
+              <span>v{i + 1}</span>{i === idx && <Check size={12} aria-hidden="true"/>}
+            </button>)}
+          </div>
+          <button className="take-version-review" onClick={() => { versionMenu.current.open = false; onBrowse(); }}>Review versions</button>
+        </div>
+      </details>}
       <div className="take-face">
         {media && (
           <button
@@ -443,7 +425,7 @@ export function TakeStack({
           </button>
         )}
         {media ? (
-          <div className="filmstrip">
+          <div className={`filmstrip ${transition ? "take-arriving" : ""}`} style={{"--take-direction":transition?.direction || 1, backgroundImage: media.thumbnail ? `url("${media.thumbnail}")` : undefined, backgroundSize:"auto 100%"}}>
             {Array.from(
               { length: Math.max(1, Math.ceil((clip.duration * zoom) / 115)) },
               (_, i) => (
@@ -455,7 +437,7 @@ export function TakeStack({
               ),
             )}
           </div>
-        ) : (
+        ) : !status ? (
           <div className="take-placeholder">
             <Plus size={20} />
             {plannedTitle && <b>{plannedTitle}</b>}
@@ -463,63 +445,30 @@ export function TakeStack({
               {tc(clip.start)} — {tc(clip.start + clip.duration)}
             </span>
           </div>
-        )}
+        ) : null}
+        {transition && <div className="take-departing" key={transition.previous.id} aria-hidden="true" style={{"--take-direction":transition.direction}}>
+          <img src={transition.previous.thumbnail || `/api/media/${transition.previous.id}/frame?time=0`} alt="" draggable={false}/>
+        </div>}
         {(media || activeJobs.length > 0) && (
           <div
             className="take-badges"
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <button
-              className="take-count"
-              aria-label={`Browse ${clip.takes.length} takes`}
-              title="All takes · scroll the clip to switch"
-              onClick={onBrowse}
-            >
-              <Layers size={12} />
-              {idx + 1}/{clip.takes.length}
-              {activeJobs.length > 0 && (
-                <span className="take-working">+{activeJobs.length}</span>
-              )}
-            </button>
-            {media?.audio && (
+            {sound && (
               <button
                 className="take-sound"
-                title={clip.mute ? "Unmute clip" : "Mute clip"}
-                aria-label={clip.mute ? "Unmute clip" : "Mute clip"}
+                title={clipAudioGain(sound) === 0 ? "Unmute clip" : "Mute clip"}
+                aria-label={clipAudioGain(sound) === 0 ? "Unmute clip" : "Mute clip"}
                 onClick={onMute}
               >
-                {clip.mute ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                {clipAudioGain(sound) === 0 ? <VolumeX size={12} /> : <Volume2 size={12} />}
               </button>
             )}
           </div>
         )}
-        {clip.takes.length > 1 && (
-          <div
-            className="wheel-arrows"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <button
-              title="Newer take"
-              aria-label="Newer take"
-              onClick={() => onTake(1)}
-            >
-              <ChevronUp size={14} />
-            </button>
-            <button
-              title="Older take"
-              aria-label="Older take"
-              onClick={() => onTake(-1)}
-            >
-              <ChevronDown size={14} />
-            </button>
-          </div>
-        )}
         {status && !media && (
-          <div className={"slot-progress " + (media ? "with-preview" : "")}>
-            <JobProgress job={status} compact inline />
-            {activeJobs.length > 1 && (
-              <span>{activeJobs.length} generating</span>
-            )}
+          <div className="slot-progress generation-slot-fill">
+            <JobProgress job={status} surface="timeline" count={activeJobs.length} />
           </div>
         )}
         {!media && !status && (

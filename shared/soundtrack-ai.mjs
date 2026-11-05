@@ -55,13 +55,15 @@ export function soundEstimate(
     const parts = run.units.filter((u) => u.role === role).flatMap(soundParts);
     const seconds = round(parts.reduce((n, p) => n + p.modelDuration, 0));
     const selectedRate = parts.some(p => p.model === AMBIENCE_MODEL) ? ambienceRate : rate;
+    const rates = Object.fromEntries(parts.map(p=>[p.model,p.model===AMBIENCE_MODEL ? ambienceRate.rate : rate.rate]));
     return {
       role,
       model: parts[0]?.model || SOUND_MODEL,
       rate: selectedRate.rate,
+      rates,
       seconds,
       requests: parts.length,
-      amount: round(seconds * selectedRate.rate),
+      amount: round(parts.reduce((n,p)=>n+p.modelDuration*rates[p.model],0)),
     };
   });
   const speech = run.units
@@ -102,6 +104,10 @@ export function soundPrompt(run, unit, part) {
   if (unit.role === "ambience") {
     const bed = [...new Set(cues.flatMap(c => c.cues))].join(". ") || "Neutral quiet environmental air";
     return {prompt: `${direction ? direction + ". " : ""}${bed}. Low, diffuse, even background texture, seamless and continuous across cuts. Environment only; no voices, music, footsteps or foreground impacts.`.slice(0,450), negative_prompt: negative_prompt + ", footsteps, foreground impacts, dramatic swell"};
+  }
+  if(unit.model === AMBIENCE_MODEL) {
+    const events=[...new Set(cues.flatMap(c=>c.cues))].join(". ") || "Soft fabric movement and tiny surface taps";
+    return {prompt: `Isolated physical sound effects only. No speech, vocals, singing or music. No continuous ambience. ${events}. Sparse individual contacts with silent gaps, dry close recording.${direction ? " "+direction : ""}`.slice(0,450),negative_prompt};
   }
   return {
     prompt: `Dry, close physical Foley synchronized with visible contact. Quiet gaps between events. ${cues.map(c => `${c.at.toFixed(1)}–${c.to.toFixed(1)}s: ${c.cues.join("; ") || "Subtle surface contacts matching visible motion"}`).join(". ")}${direction ? ". " + direction : ""}`.slice(0,2200),

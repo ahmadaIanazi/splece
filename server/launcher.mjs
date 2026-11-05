@@ -10,9 +10,10 @@ export function activeStudioJobs(db) {
     "applied",
     "dismissed",
     "submission_uncertain",
+    "needs_attention",
   ]);
   let count = 0;
-  for (const table of ["jobs", "smart_jobs", "story_jobs", "soundtrack_runs", "lip_sync_jobs", "image_jobs", "photo_analyses", "asset_analyses"]) {
+  for (const table of ["jobs", "smart_jobs", "story_jobs", "soundtrack_runs", "lip_sync_jobs", "effect_jobs", "image_jobs", "photo_analyses", "asset_analyses", "local_analysis", "reel_jobs"]) {
     if (
       !db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
@@ -28,7 +29,7 @@ export function activeStudioJobs(db) {
 
 // Installed before application routes. A restart is refused while either work
 // or an API write is in flight; new writes cannot race an accepted shutdown.
-export async function installLauncherControl(app, { store, root, data, stop }) {
+export async function installLauncherControl(app, { store, root, data, stop, extraActiveJobs = () => 0 }) {
   const version = await sourceVersion(root, "server"),
     startedAt = Date.now();
   let writes = 0,
@@ -64,7 +65,7 @@ export async function installLauncherControl(app, { store, root, data, stop }) {
       pid: process.pid,
       startedAt,
       version,
-      activeJobs: activeStudioJobs(store.db),
+      activeJobs: activeStudioJobs(store.db) + extraActiveJobs(),
       activeWrites: writes,
       draining,
     }),
@@ -74,7 +75,7 @@ export async function installLauncherControl(app, { store, root, data, stop }) {
       return res.status(409).json({
         error: "The server changed. Reopen the studio and try again.",
       });
-    const count = activeStudioJobs(store.db);
+    const count = activeStudioJobs(store.db) + extraActiveJobs();
     if (count || writes)
       return res.status(409).json({
         error: count

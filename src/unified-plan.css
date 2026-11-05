@@ -1,0 +1,93 @@
+/* Planning lives in the same panel and lower canvas as every studio tool. */
+.planning-controller { display: contents; }
+.plan-setup-host, .plan-timeline-host { height: 100%; min-height: 0; }
+.planning-studio.planning-embedded { display: flex; height: 100%; min-height: 0; background: transparent; }
+.planning-embedded > .planning-setup, .planning-embedded > .planning-board-area { flex: 1; min-width: 0; }
+.plan-tool-pane .planning-setup { border-radius: 0; }
+.planning-embedded .planning-setup > header { padding: 12px 14px 8px; }
+.planning-embedded .planning-eyebrow { display: none; }
+.planning-embedded h2 { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.planning-embedded .planning-setup > header button { width: 30px; min-height: 30px; }
+.planning-embedded .planning-conversation { padding-inline: 14px; }
+.planning-embedded .planning-welcome { padding: 8px 0; }
+.planning-embedded .planning-welcome h3 { font-size: 17px; }
+.planning-embedded .planning-chat-input { margin: 6px 10px 10px; padding: 6px; border-radius: 14px; }
+.planning-embedded .planning-chat-input textarea { min-height: 54px; max-height: 96px; padding: 6px; }
+.planning-embedded .planning-chat-input small { max-width: 22ch; }
+.planning-embedded .planning-skip { background: transparent; border: 0; color: var(--accent); padding: 0; font-size: 12px; }
+.plan-timeline-panel {
+  height: clamp(300px, var(--timeline), 65vh); min-height: min(300px, 65vh);
+  flex-shrink: 0; min-width: 0; overflow: hidden; background: var(--surface-canvas);
+}
+.editor-shell .timeline-panel[hidden], .plan-timeline-panel[hidden] { display: none; }
+.planning-embedded .planning-board-heading { padding: 8px 14px; gap: 8px; flex: none; }
+.planning-embedded .planning-board-heading h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(55vw, 60ch); }
+.planning-embedded .planning-board-heading button { min-height: 30px; padding: 6px; }
+.planning-embedded .planning-board { padding: 0 14px 24px; }
+.planning-embedded .planning-columns { gap: 12px; }
+.planning-embedded .planning-ruler { height: 28px; margin-bottom: 4px; }
+.planning-embedded .planning-card { padding: 14px; border-radius: 12px; border: 1px solid transparent; box-shadow: none; }
+.planning-embedded .planning-card.is-selected { border-color: var(--accent); box-shadow: none; }
+.planning-embedded .planning-card.planning-scene-card { min-height: 0; background: var(--surface-panel); border-top-color: var(--plan-group-color); }
+.planning-embedded .planning-card-title > span { font-size: 13px; letter-spacing: 0; }
+.planning-embedded .planning-scene-card .planning-card-title { color: var(--plan-group-color); }
+.planning-embedded .planning-card p { margin: 10px 0 12px; }
+.planning-embedded .planning-card footer { margin-top: 12px; }
+.planning-embedded .planning-empty { padding: 20px; }
+.planning-embedded .planning-empty .planning-ghosts { display: none; }
+.plan-view .composer-pointer { display: none; }
+.workspace-header.sculpted-header { grid-template-columns: minmax(150px, 1fr) auto; }
+.sculpted-header .workspace-utilities { grid-column: 2; }
+.starter-entry-actions { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.starter-entry-actions .starter-skip { border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; min-height: 34px; }
+.starter-entry-actions .starter-skip:hover { color: var(--text-primary); }
+@media (max-width: 760px) {
+  .planning-embedded .planning-board-heading h2 { max-width: 45vw; }
+  .planning-embedded .planning-column { width: min(var(--card-width), 80vw); }
+  .workspace-header.sculpted-header { grid-template-columns: minmax(90px, 1fr) auto; }
+}
+@media (prefers-reduced-motion: reduce) { .planning-embedded .planning-card { transition: none; } }
+
+/* Time-scaled plan: ancestor labels above one fixed-height card lane. */
+.plan-timeline-panel { display: flex; flex-direction: column; }
+.plan-timeline-panel .plan-timeline-host { flex: 1; height: auto; min-height: 0; }
+.plan-footer-host { flex: none; }
+.plan-footer-host .timeline-footer { min-height: 48px; }
+.planning-embedded .planning-board { overflow-x: auto; overflow-y: hidden; padding: 0 14px; scrollbar-width: none; touch-action: pan-x; }
+.planning-embedded .planning-board::-webkit-scrollbar { display: none; }
+.planning-time-track { position: relative; height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.planning-time-ruler { position: relative; height: 25px; flex: none; cursor: crosshair; touch-action: none; border-top: 1px solid var(--border, #30343d); margin-top: 6px; }
+.planning-time-ruler span { position: absolute; top: 2px; font-size: 10px; white-space: nowrap; color: var(--text-secondary); border-left: 1px solid #404652; padding-left: 4px; }
+.planning-time-ruler:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.planning-group-titles { height: calc(var(--group-rows) * 24px); flex: none; position: relative; }
+.planning-studio .planning-group-title { position: absolute; min-height: 22px; height: 22px; justify-content: flex-start; padding: 0 8px; border: 0; border-radius: 0; background: transparent; font-size: 11px; border-bottom: 1px solid currentColor; overflow: hidden; }
+.planning-group-title span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.planning-group-title svg { flex: none; transform: rotate(90deg); }
+.planning-card-lane { flex: 1; min-height: 0; position: relative; margin-top: 6px; }
+.planning-timed-card { position: absolute; top: 0; bottom: 0; padding-right: 5px; box-sizing: border-box; container-type: inline-size; }
+.planning-embedded .planning-timed-card .planning-card { height: 100%; min-height: 0; box-sizing: border-box; margin: 0; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.planning-timed-card .planning-card-title { flex: none; min-height: 24px; }
+.planning-timed-card .planning-card-title > span { font-size: 12px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.planning-embedded .planning-timed-card .planning-card p { flex: 1 1 45px; min-height: 0; margin: 0; overflow: hidden; font-size: 11px; line-height: 1.5; }
+.planning-timed-card blockquote { flex: 0 1 36px; min-height: 0; overflow: hidden; margin: 0; font-size: 11px; }
+.planning-timed-card .planning-faces { flex: none; height: 24px; overflow: hidden; }
+.planning-timed-card .planning-faces button { width: 24px; height: 24px; min-height: 24px; }
+.planning-timed-card .planning-card-media { flex: 0 1 70px; min-height: 0; overflow: hidden; }
+.planning-timed-card .planning-poster, .planning-timed-card .planning-footage { height: 100%; max-height: 70px; min-height: 0; width: 100%; }
+.planning-embedded .planning-timed-card .planning-card footer { flex: none; margin-top: auto; height: 28px; overflow: hidden; }
+.planning-timed-card .planning-create { white-space: nowrap; min-height: 26px; padding: 4px 6px; }
+.planning-time-playhead { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--accent, #8ab7fb); pointer-events: none; z-index: 2; }
+.planning-time-playhead::before { content: ''; position: absolute; bottom: 17px; left: -4px; width: 8px; height: 8px; background: var(--accent, #8ab7fb); border-radius: 2px; }
+@container (max-width: 170px) {
+  .planning-timed-card .planning-card footer > span, .planning-timed-card .planning-card-title small { display: none; }
+  .planning-timed-card .planning-card-title svg { display: none; }
+  .planning-timed-card .planning-card footer { justify-content: flex-end; }
+}
+.plan-timeline-panel { height: clamp(380px, var(--timeline), 75vh); min-height: min(380px, 75vh); }
+.planning-timed-card .planning-poster { margin-top: 0; }
+.planning-timed-card .planning-card p { flex-shrink: 1; }
+.planning-start { padding: 28px; gap: 16px; }
+.planning-start .planning-start-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.planning-start .planning-start-actions button { min-height: 44px; padding: 10px 20px; border-radius: 999px; }
+.planning-start .planning-image-drop { display: grid; gap: 8px; padding: 20px 28px; border: 1px dashed var(--border); border-radius: 16px; margin-top: 8px; max-width: 540px; text-align: center; }
+.planning-start .planning-image-drop small { color: var(--muted); font-size: 12px; line-height: 1.5; }

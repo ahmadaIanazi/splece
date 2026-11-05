@@ -1,4 +1,10 @@
+export function libraryAssetKind(asset) {
+  if (asset.media?.kind === "audio") return "audio";
+  if (asset.kind === "footage" && asset.media?.kind === "image") return "image";
+  return asset.kind;
+}
 export const assetTypes = [
+  {id: "image", name: "Image", hint: "Photos & image references", description: "Describe the image or how you want to use it…"},
   {
     id: "character",
     name: "Character",

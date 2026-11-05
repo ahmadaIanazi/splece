@@ -1,5 +1,5 @@
-import { saveAssetEdit } from "../shared/asset-edit.mjs";
-import { AssetWorkbench } from "./asset-workbench";
+import { saveAssetEdit, refreshAssetEdit } from "../shared/asset-edit.mjs";
+import { AssetWorkbench, MediaAssetWorkbench } from "./asset-workbench";
 import { saveLocalDraft } from "../shared/local-draft.mjs";
 import {
   isProjectOnly,
@@ -11,6 +11,7 @@ import { ProjectStart } from "./project-start";
 import { AssetTypePicker } from "./asset-type-picker";
 import {
   assetTypes,
+  libraryAssetKind,
   libraryAssetKey,
 } from "../shared/library-organization.mjs";
 import {
@@ -43,6 +44,7 @@ import {
   ArrowUpRight,
   ArrowRight,
   Image,
+  Images,
   UserRound,
   MapPin,
   Paperclip,
@@ -86,7 +88,7 @@ function Icon({
     </button>
   );
 }
-function Modal({ title, onClose, children, wide, className = "" }) {
+function Modal({ title, onClose, children, wide, className = "", headerLeading, headerStatus }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -156,7 +158,9 @@ function Modal({ title, onClose, children, wide, className = "" }) {
         className={`modal ${wide ? "wide" : ""} ${className}`}
       >
         <header>
+          {headerLeading}
           <h2>{title}</h2>
+          {headerStatus}
           <Icon icon={X} label="Close dialog" onClick={onClose} />
         </header>
         {children}
@@ -514,6 +518,8 @@ function RemarkModal({ value, lanes, onClose, onSave, onDelete }) {
   );
 }
 function AssetLibrary({
+  saveStatus="saved",
+  onRetrySave,
   initialAssetId,
   initialKind,
   initialFolderId,
@@ -525,6 +531,7 @@ function AssetLibrary({
   update,
   onClose,
   onImport,
+  onAdopt,
   onAddMedia,
   onDemo,
 }) {
@@ -544,7 +551,7 @@ function AssetLibrary({
     asset
       ? {
           ...structuredClone(asset),
-          kind: asset.media?.kind === "audio" ? "audio" : asset.kind,
+          kind: libraryAssetKind(asset),
         }
       : null;
   const [choosing, setChoosing] = useState(false),
@@ -577,6 +584,19 @@ function AssetLibrary({
     latestUpdate = useRef(update);
   latestUpdate.current = update;
   const [autoSaving, setAutoSaving] = useState(false);
+  const lastAssetRecord = useRef(p.assets.find(asset => asset.id === editing?.id));
+  useEffect(() => {
+    const incoming = p.assets.find(asset => asset.id === editingRef.current?.id);
+    const previous = lastAssetRecord.current;
+    lastAssetRecord.current = incoming;
+    if (!incoming || incoming.id !== previous?.id) return;
+    const next = refreshAssetEdit(previous, editingRef.current, incoming);
+    if (JSON.stringify(next) === JSON.stringify(editingRef.current)) return;
+    editingRef.current = next;
+    if (pendingEdit.current) pendingEdit.current.after = next;
+    setEditing(next);
+  }, [p.assets, editing?.id]);
+
   function flushAssetEdit() {
     clearTimeout(saveTimer.current);
     const pending = pendingEdit.current;
@@ -621,35 +641,14 @@ function AssetLibrary({
   const type = assetTypes.find((type) => type.id === editing?.kind);
   return (
     <Modal
-      title={editing ? editing.name || `New ${editing.kind}` : "Asset library"}
+      title={editing ? editing.name || `New ${editing.kind}` : "Library"}
       onClose={closeEditor}
       wide
       className="asset-library-modal"
+      headerLeading={editing ? <button type="button" className="character-header-back" onClick={() => {flushAssetEdit(); initialAssetId || initialKind ? onClose() : setEditing(null);}}><ArrowLeft size={16}/> Library</button> : null}
+      headerStatus={editing ? <small role="status">{autoSaving || saveStatus==="saving" ? "Saving…" : saveStatus==="unsaved" ? "Not saved to disk" : saveStatus!=="saved" ? saveStatus : p.assets.some(a=>a.id===editing.id) ? "Saved" : ""}{saveStatus==="unsaved" && <button type="button" onClick={onRetrySave}>Retry save</button>}</small> : null}
     >
-      {editing ? (
-        <div className="asset-edit-navigation">
-          <button
-            type="button"
-            className="text-action"
-            onClick={() => {
-              flushAssetEdit();
-              initialAssetId || initialKind ? onClose() : setEditing(null);
-            }}
-          >
-            <ArrowLeft size={16} />
-            {(initialAssetId || initialKind) && manageOnly
-              ? "Back to story"
-              : "Back to library"}
-          </button>
-          <span role="status">
-            {visual
-              ? autoSaving
-                ? "Saving changes…"
-                : "Changes save automatically"
-              : `Editing ${editing.kind}`}
-          </span>
-        </div>
-      ) : (
+      {editing ? null : (
         <>
           <div className="asset-toolbar">
             <div>
@@ -716,6 +715,7 @@ function AssetLibrary({
               "prop",
               "style",
               "footage",
+              "image",
               "audio",
             ].map((k) => (
               <button
@@ -734,6 +734,7 @@ function AssetLibrary({
                     prop: Package,
                     style: Palette,
                     footage: Film,
+                    image: Images,
                     audio: AudioLines,
                   }[k],
                   { size: 14 },
@@ -761,7 +762,7 @@ function AssetLibrary({
             e.preventDefault();
             if (
               editing.media &&
-              editing.media.kind !==
+              (editing.media.kind || "video") !==
                 (visual
                   ? "image"
                   : editing.kind === "audio"
@@ -779,11 +780,7 @@ function AssetLibrary({
               );
               return;
             }
-            if (visual) flushAssetEdit();
-            else
-              update((n) => {
-                editAsset(n, editing);
-              });
+            flushAssetEdit();
             if (
               initialFolderId &&
               !p.assets.some((a) => a.id === editing.id) &&
@@ -804,8 +801,9 @@ function AssetLibrary({
               key={editing.id + editing.kind}
               asset={editing}
               project={p}
-              change={visual ? changeEditing : setEditing}
+              change={changeEditing}
               onImport={onImport}
+              onAdopt={onAdopt}
               organization={organization}
               initialFolderId={
                 !p.assets.some((a) => a.id === editing.id)
@@ -824,267 +822,14 @@ function AssetLibrary({
               }
             />
           ) : (
-            <>
-              <div className="asset-media-column">
-                {visual ? (
-                  <>
-                    {!editing.media && (
-                      <button
-                        type="button"
-                        className="asset-upload-empty"
-                        onClick={() =>
-                          onImport(editing.kind, (m) =>
-                            setEditing((old) => appendCharacterImage(old, m)),
-                          )
-                        }
-                      >
-                        <Upload size={32} />
-                        <b>Add {type?.name.toLowerCase()} reference</b>
-                        <small>Upload an image · saved locally</small>
-                      </button>
-                    )}
-                    <Suspense fallback={<small>Opening image creator…</small>}>
-                      <AssetGenerator
-                        key={editing.id + editing.kind}
-                        asset={editing}
-                        project={p}
-                        change={visual ? changeEditing : setEditing}
-                        onStarted={(input) =>
-                          update((n) => {
-                            if (!n.assets.some((a) => a.id === editing.id))
-                              editAsset(n, {
-                                ...editing,
-                                name:
-                                  input.name || input.description.slice(0, 48),
-                                description:
-                                  editing.description || input.description,
-                              });
-                          })
-                        }
-                      />
-                    </Suspense>
-                    <CharacterMedia
-                      asset={editing}
-                      change={visual ? changeEditing : setEditing}
-                    />
-                  </>
-                ) : editing.media ? (
-                  editing.kind === "audio" ? (
-                    <audio
-                      controls
-                      src={editing.media.url}
-                      aria-label="Asset audio preview"
-                    />
-                  ) : (
-                    <video
-                      controls
-                      src={editing.media.url}
-                      aria-label="Asset footage preview"
-                    />
-                  )
-                ) : (
-                  <div className="asset-upload-empty">
-                    <Upload size={32} />
-                    <p>
-                      Upload{" "}
-                      {editing.kind === "audio"
-                        ? "music, voice or a sound effect"
-                        : "a video clip"}{" "}
-                      to preview it here.
-                    </p>
-                  </div>
-                )}
-              </div>
-              <div className="asset-details-column">
-                <AssetOrganizationEditor
-                  key={editing.id}
-                  organization={organization}
-                  assetKey={libraryAssetKey(p.id, editing)}
-                  asset={editing}
-                  defaultFolderId={
-                    !p.assets.some((a) => a.id === editing.id)
-                      ? initialFolderId
-                      : null
-                  }
-                />
-                {visual && (
-                  <AssetExchange
-                    key={editing.id + editing.kind}
-                    asset={editing}
-                    project={p}
-                    change={visual ? changeEditing : setEditing}
-                  />
-                )}
-                <div className="details-grid">
-                  <Field label="Name">
-                    <input
-                      required
-                      value={editing.name}
-                      onChange={(e) =>
-                        setEditing({ ...editing, name: e.target.value })
-                      }
-                    />
-                  </Field>
-                  <Field label="Asset type">
-                    <select
-                      value={editing.kind}
-                      onChange={(e) =>
-                        setEditing({ ...editing, kind: e.target.value })
-                      }
-                    >
-                      {assetKinds.map((k) => (
-                        <option key={k}>{k}</option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-                <label className="asset-scope-toggle">
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label="Project only"
-                    checked={isProjectOnly(editing)}
-                    disabled={
-                      needsReferenceApproval(editing) &&
-                      !hasReferenceImage(editing)
-                    }
-                    onChange={(e) =>
-                      setEditing(
-                        setAssetProjectOnly({ ...editing }, e.target.checked),
-                      )
-                    }
-                  />
-                  Project only{" "}
-                  <small>
-                    {needsReferenceApproval(editing)
-                      ? hasReferenceImage(editing)
-                        ? "Turn off to approve this reference and share across projects."
-                        : "Add an image reference, then approve it for sharing."
-                      : "Off: available in the shared library."}
-                  </small>
-                </label>
-                <Field
-                  label={
-                    editing.kind === "character"
-                      ? "Identity & personality"
-                      : editing.kind === "location"
-                        ? "Environment & atmosphere"
-                        : editing.kind === "prop"
-                          ? "Object details"
-                          : editing.kind === "style"
-                            ? "Visual direction"
-                            : "Description & usage notes"
-                  }
-                >
-                  <textarea
-                    required={visual}
-                    placeholder={type?.description}
-                    rows={3}
-                    value={editing.description || ""}
-                    onChange={(e) =>
-                      setEditing({ ...editing, description: e.target.value })
-                    }
-                  />
-                </Field>
-                {visual && (
-                  <Field
-                    label={
-                      editing.kind === "character"
-                        ? "Appearance, clothing & pose"
-                        : "Visual details & variations"
-                    }
-                  >
-                    <textarea
-                      rows={2}
-                      value={editing.variant || ""}
-                      onChange={(e) =>
-                        setEditing({ ...editing, variant: e.target.value })
-                      }
-                    />
-                  </Field>
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    onImport(editing.kind, (m) =>
-                      setEditing((old) =>
-                        visual
-                          ? appendCharacterImage(old, m)
-                          : { ...old, media: m, name: old.name || m.name },
-                      ),
-                    )
-                  }
-                >
-                  <Upload size={14} />
-                  Upload {editing.kind}
-                  {visual ? " reference" : ""}
-                </button>
-                <Field
-                  label={
-                    visual
-                      ? "Choose an existing reference"
-                      : "Choose existing media"
-                  }
-                >
-                  <select
-                    value={editing.media?.id || ""}
-                    onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        media:
-                          p.assets.find((a) => a.media?.id === e.target.value)
-                            ?.media || null,
-                      })
-                    }
-                  >
-                    <option value="">No media attached</option>
-                    {p.assets
-                      .filter(
-                        (a) =>
-                          a.media &&
-                          (visual
-                            ? a.media.kind === "image"
-                            : a.media.kind ===
-                              (editing.kind === "audio" ? "audio" : "video")),
-                      )
-                      .map((a) => (
-                        <option key={a.id} value={a.media.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                  </select>
-                </Field>
-                <CharacterMedia
-                  asset={editing}
-                  change={visual ? changeEditing : setEditing}
-                  voiceOnly
-                />
-                {visual && (
-                  <VariantEditor
-                    asset={editing}
-                    change={visual ? changeEditing : setEditing}
-                    mediaAssets={p.assets.filter(
-                      (a) => a.media?.kind === "image",
-                    )}
-                  />
-                )}
-              </div>
-            </>
+            <MediaAssetWorkbench asset={editing} project={p} change={changeEditing} onImport={onImport} organization={organization} initialFolderId={initialFolderId}/>
           )}
           <div className="detail-actions">
-            <button className="primary">
+            <button className="primary" disabled={editing.kind === "character" && !editing.name?.trim() && !editing.media}>
               <Check size={15} />
-              {visual ? "Done" : "Save asset"}
+              Done
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                flushAssetEdit();
-                initialAssetId || initialKind ? onClose() : setEditing(null);
-              }}
-            >
-              {visual ? "Close" : "Cancel"}
-            </button>
+
           </div>
         </form>
       ) : (
@@ -1146,6 +891,7 @@ function AssetLibrary({
                             prop: Package,
                             style: Palette,
                             footage: Film,
+                    image: Images,
                             audio: AudioLines,
                           }[a.kind] || Image,
                           { size: 32 },

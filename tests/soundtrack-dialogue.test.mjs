@@ -353,6 +353,22 @@ test("mocked live dialogue persists each speaker job, resumes without resubmissi
     applySoundtrackResults(p, done);
     assert.equal(p.audioClips.length, 0);
     assert.ok(p.assets.some((a) => a.id === done.units[0].id));
+    // A reviewed result may already be acknowledged. The replacement must still
+    // reach the editor, and repeated recovery must not create duplicate takes.
+    store.save(p, revision);
+    done.units[0].delivered = true;
+    store.db.prepare("UPDATE soundtrack_runs SET body=? WHERE id=?")
+      .run(JSON.stringify(done), done.id);
+    const fitted = await service.fitTiming(p.id, done.id, {unitId: done.units[0].id});
+    assert.equal(fitted.units[0].delivered, undefined);
+    assert.equal(fitted.units[0].needsTiming, false);
+    assert.equal(fitted.units[0].media.duration, 6);
+    assert.equal(fitted.cost, 0);
+    assert.equal(posted.length, 2, "timing recovery must not call the provider");
+    assert.equal((await service.fitTiming(p.id, done.id, {unitId: done.units[0].id})).id, fitted.id);
+    applySoundtrackResults(p, fitted);
+    assert.equal(p.audioClips.length, 1);
+    assert.equal(p.audioClips[0].duration, 6);
   }));
 test("joining speech keeps full recordings sequentially and pads short speech without cropping", async () => {
   const folder = await fs.mkdtemp(path.join(os.tmpdir(), "speech-join-"));
@@ -412,4 +428,10 @@ test("highlighted dialogue keeps whole lines by onset and never clears a recordi
     ),
   );
   assert.equal(p.audioClips.length, 1);
+});
+
+test("talking scenes use non-looping cue-based Foley without sending faces to the video sound model",()=>{
+ const p=fixture(),run=createSoundtrackPlan(p,{roles:["effect"]},id);
+ assert.equal(run.units[0].model,"fal-ai/elevenlabs/sound-effects/v2");
+ assert.ok(soundParts(run.units[0]).every(p=>p.model===run.units[0].model));
 });

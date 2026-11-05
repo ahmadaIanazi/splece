@@ -1,3 +1,11 @@
+import { createDerivedProjects, installDerivedProjectRoutes } from './derived-projects.mjs';
+import { createReelEffects, installReelEffects } from './reel-effects.mjs';
+import {exportFileName} from "../shared/export-presentation.mjs";
+import { createAddonService, installAddonRoutes } from "./addons.mjs";
+import { createLocalTools, installLocalToolRoutes } from "./local-tools.mjs";
+import { createOpenverse, installOpenverseRoutes } from "./openverse.mjs";
+import { installAIRouting } from "./ai-routing.mjs";
+import { createEffectsService, installEffectsRoutes } from './effects.mjs';
 import {createFolderSettings, installFolderRoutes, chooseFolder} from "./folders.mjs";
 import {elementsFor} from "../shared/elements.mjs";
 import { hasComposerWriting } from "../shared/composer-sequence.mjs";
@@ -128,17 +136,23 @@ app.use((req, res, next) => {
 });
 app.use(localSession());
 app.use(express.json({ limit: "20mb" }));
+const addons = await createAddonService({ data });
+const localTools = createLocalTools({ store, data, addons });
 let httpServer;
 await installLauncherControl(app, {
   store,
   root,
   data,
+  extraActiveJobs: () => addons.list().filter((a) => ["installing", "removing"].includes(a.status)).length,
   stop: () => {
     httpServer.close(() => process.exit(0));
     httpServer.closeIdleConnections();
     setTimeout(() => httpServer.closeAllConnections(), 1000).unref();
   },
 });
+installAddonRoutes(app, addons);
+installLocalToolRoutes(app, localTools);
+installOpenverseRoutes(app, createOpenverse({ store, addons }));
 await installUpdateRoutes(app, {root,data});
 const imageService = createImageService({store,data,checkpoint:id=>portable.checkpoint(id)});
 installWorkflowRoutes(app, {getProject: id => getProject(id)});
@@ -146,7 +160,12 @@ const soundtrack = createSoundtrackService({ store, data });
 installSoundtrackRoutes(app, soundtrack);
 const lipSync = createLipSyncService({store,data});
 installLipSyncRoutes(app, lipSync);
-installComparisonRoutes(app, {store,data});
+const effects = createEffectsService({ store, data, checkpoint: id => portable.checkpoint(id) });
+installEffectsRoutes(app, effects);
+const reels = createReelEffects({store,data,addons,checkpoint:id=>portable.checkpoint(id)});
+installReelEffects(app,reels);
+installDerivedProjectRoutes(app, createDerivedProjects({store, projectsRoot: async () => folders.writable(folders.get().projectsRoot)}));
+installComparisonRoutes(app, {store,data,effects});
 installLibraryRoutes(app, { library, getProject: (id) => getProject(id) });
 installLibraryOrganizationRoutes(app, store);
 installProjectLifecycle(app, { store, library });
@@ -203,7 +222,7 @@ app.put("/api/video-defaults", async (req, res) => {
   const mode =
     req.body.mode === "venice"
       ? "venice"
-      : (await studioMode(data)) === "live"
+      : (await studioMode(data,"video")) === "live"
         ? "venice"
         : "demo";
   const { models } =
@@ -503,7 +522,7 @@ app.post("/api/projects/:id/jobs", async (req, res) => {
     }
     if (
       authorization.provider !== "Local simulator" ||
-      model.providerId === "fal"
+      ["fal", "xai"].includes(model.providerId)
     )
       await video.prepare(job.snapshot, project);
   } catch (error) {
@@ -843,6 +862,7 @@ app.post("/api/projects/:id/export", async (req, res) => {
     createdAt: Date.now(),
     dueAt: Date.now(),
     snapshot: {
+      fileName: exportFileName(req.body.fileName || project.name),
       clips: structuredClone(project.clips),
       elements: structuredClone(elementsFor(project)),
       audioClips: structuredClone(project.audioClips),
@@ -857,14 +877,20 @@ app.get("/api/exports/:id", (req, res) => {
   const j = store.job(req.params.id);
   if (!j || j.kind !== "export" || j.state !== "ready")
     return res.sendStatus(404);
-  res.download(j.output, "episode.mp4");
+  res.download(j.output, exportFileName(j.snapshot.fileName || getProject(j.projectId).project.name));
 });
+app.get("/api/exports/:id/preview", (req,res)=>{
+  const j=store.job(req.params.id);
+  if (!j || j.kind!=="export" || j.state!=="ready") return res.sendStatus(404);
+  res.sendFile(path.resolve(j.output));
+});
+installAIRouting(app,{data});
 installCatalogRoutes(
   app,
   createCatalogService({
     data,
     venice: createVeniceSettings(data),
-    deepseek: createDeepSeekSettings(data),
+    deepseek: createVeniceSettings(data, "deepseek"),
     video,
     discover: discoverDeepSeekModels,
   }),
@@ -891,7 +917,7 @@ installBillingRoutes(
     data,
     settings: {
       venice: createVeniceSettings(data),
-      deepseek: createDeepSeekSettings(data),
+      deepseek: createVeniceSettings(data, "deepseek"),
       fal: credentials(data, "fal"),
     },
   }),

@@ -1,15 +1,18 @@
+import { ComposerPopover } from "./composer-popover";
+import { ComposerLookPicker } from "./composer-look-picker";
+import { selectedLook } from "../shared/look-selection.mjs";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   BookOpen,
+  AudioLines,
   Camera,
   Check,
   ChevronDown,
   GripVertical,
   MessageCircle,
   Plus,
-  Send,
   Smile,
   Trash2,
   Users,
@@ -32,7 +35,7 @@ const kinds = [
     Icon: MessageCircle,
     placeholder: "What do they say?",
   },
-  { id: "action", label: "Action", Icon: Zap, placeholder: "What do they do?" },
+  { id: "action", label: "Action", Icon: Zap, placeholder: "What happens?" },
   {
     id: "emote",
     label: "Emote",
@@ -57,29 +60,26 @@ function CharacterPicker({
   value,
   characters,
   onChange,
+  onLook,
   label,
   allowScene = false,
+  compact = false,
+  onAdd,
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const trigger = useRef(null);
   const actor = characters.find((asset) => asset.id === value);
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e) => {
-      if (!root.current?.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
   const choose = (id) => {
     onChange(id);
     setOpen(false);
     trigger.current?.focus();
+    const asset = characters.find(a => a.id === id);
+    if (asset) onLook?.(asset, trigger.current);
   };
   return (
     <div
-      className="stream-character-picker"
+      className={`stream-character-picker${compact ? " compact" : ""}`}
       ref={root}
       onKeyDown={(e) => {
         if (e.key === "Escape" && open) {
@@ -95,6 +95,7 @@ function CharacterPicker({
         className="stream-character-name"
         ref={trigger}
         aria-label={label}
+        title={compact ? label : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -103,13 +104,10 @@ function CharacterPicker({
         <span>
           {actor?.name || (allowScene ? "The scene" : "Choose character")}
         </span>
+        {compact && <ChevronDown size={12} aria-hidden="true" />}
       </button>
       {open && (
-        <div
-          className="stream-character-menu"
-          role="dialog"
-          aria-label="Choose character"
-        >
+        <ComposerPopover anchor={trigger.current} onClose={() => setOpen(false)} label="Choose character">
           {allowScene && (
             <button type="button" onClick={() => choose("")}>
               The scene
@@ -127,7 +125,8 @@ function CharacterPicker({
             </button>
           ))}
           {!characters.length && <span>No project characters yet.</span>}
-        </div>
+          {onAdd && <button type="button" onClick={() => { setOpen(false); onAdd(); }}><Plus size={16} aria-hidden="true" />Add character or asset</button>}
+        </ComposerPopover>
       )}
     </div>
   );
@@ -143,6 +142,9 @@ export function DialogueStream({
   onAddShot,
   onAssets,
   onLibrary,
+  onSound,
+  soundMode = false,
+  soundComposer,
   onMention,
   onDropAsset,
   onCursor,
@@ -152,6 +154,9 @@ export function DialogueStream({
   assistant,
 }) {
   const [drafts, setDrafts] = useState({});
+  const [lookTarget, setLookTarget] = useState(null);
+  const [composeCollapsed, setComposeCollapsed] = useState(false);
+  const openLook = (asset, anchor) => setLookTarget({ id: asset.id, anchor });
   const [selected, setSelected] = useState(null);
   const [notice, setNotice] = useState("");
   const [dragging, setDragging] = useState(null);
@@ -162,10 +167,15 @@ export function DialogueStream({
     setSelected(null);
     requestAnimationFrame(() => optionButtons.current.get(id)?.focus());
   };
-  const cast = assets.filter((asset) => asset.kind === "character");
+  const displayAssets = allAssets.map(asset => {
+    if (asset.kind !== "character") return asset;
+    const look = selectedLook(asset, draft, allAssets);
+    return { ...asset, media: look?.media || asset.media };
+  });
+  const cast = displayAssets.filter(asset => asset.kind === "character" && assets.some(a => a.id === asset.id));
   const characters = [
     ...cast,
-    ...allAssets.filter(
+    ...displayAssets.filter(
       (asset) =>
         asset.kind === "character" &&
         !cast.some((item) => item.id === asset.id),
@@ -173,7 +183,7 @@ export function DialogueStream({
   ];
   const shotIndex = draft.scenes.findIndex((item) => item.id === scene?.id);
   const pending = drafts[scene?.id] || {};
-  const kind = pending.kind || "speak";
+  const kind = pending.kind || (cast.length ? "speak" : "action");
   const speaker = pending.speaker ?? cast[0]?.id ?? "";
   const activeCharacter = characters.find((asset) => asset.id === speaker);
   const currentKind = kinds.find((item) => item.id === kind);
@@ -281,9 +291,9 @@ export function DialogueStream({
       </button>
     );
   return (
-    <section className="dialogue-stream" aria-label="Dialogue stream composer">
+    <section className={`dialogue-stream ${soundMode ? "is-sound-mode" : ""}`} aria-label={soundMode ? "Video sound composer" : "Dialogue stream composer"}>
       <div className="stream-topbar">
-        <nav className="stream-shots" aria-label="Shot sequence">
+        {soundMode ? <strong className="stream-shots">Sound</strong> : <nav className="stream-shots" aria-label="Shot sequence">
           {draft.scenes.map((shot, index) => (
             <button
               type="button"
@@ -303,7 +313,7 @@ export function DialogueStream({
           >
             <Plus size={16} />
           </button>
-        </nav>
+        </nav>}
         <button
           type="button"
           aria-label="Open prompt library"
@@ -312,7 +322,9 @@ export function DialogueStream({
         >
           <BookOpen size={16} />
         </button>
+        {onSound && <button type="button" aria-label="Sound prompt composer" title="Sound prompt composer" aria-pressed={soundMode} onClick={onSound}><AudioLines size={16} /></button>}
       </div>
+      {soundMode ? soundComposer : <>
       <div className="stream-scroll" data-scene-id={scene.id}>
         <details
           className="stream-scene"
@@ -330,8 +342,9 @@ export function DialogueStream({
               What’s happening around them?
             </label>
             <CanvasWriting
-              assets={allAssets}
+              assets={displayAssets}
               onMention={onMention}
+              onLook={openLook}
               label={`Scene ${shotIndex + 1} description`}
               placeholder="A place, an opening action, a little atmosphere…"
               value={scene.text}
@@ -469,6 +482,7 @@ export function DialogueStream({
                     <CharacterPicker
                       value={event.speaker || ""}
                       characters={characters}
+                      onLook={openLook}
                       label={`Change character for moment ${index + 1}: ${actor?.name || "The scene"}`}
                       allowScene={event.kind !== "speak"}
                       onChange={(id) => selectCharacter(id, event.id)}
@@ -495,8 +509,9 @@ export function DialogueStream({
                     </div>
                   </header>
                   <CanvasWriting
-                    assets={allAssets}
+                    assets={displayAssets}
                     onMention={reference}
+                    onLook={openLook}
                     quotedMentions
                     autoDirection
                     label={`${type.label} text for moment ${index + 1}`}
@@ -690,81 +705,74 @@ export function DialogueStream({
         {!events.length && !scene.text && (
           <div className="stream-empty">
             <MessageCircle size={26} strokeWidth={1.4} />
-            <h3>Start with a hello.</h3>
+            <h3>{cast.length ? "Give your characters a moment." : "Describe what happens."}</h3>
             <p>
-              Pick a character and give them a line.
+              Start with an action, a place, or a line of dialogue.
               <br />
-              Add an action or a feeling whenever you like.
+              Your writing stays editable.
             </p>
           </div>
         )}
       </div>
       <form
-        className="stream-compose"
+        className={`stream-compose${composeCollapsed ? " is-collapsed" : ""}`}
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
-        <div className="stream-compose-heading">
-          <div className="stream-compose-cast">
-            <CharacterPicker
-              value={speaker}
-              characters={characters}
-              label={`Change character for new moment: ${activeCharacter?.name || "The scene"}`}
-              allowScene={kind !== "speak"}
-              onChange={(id) => selectCharacter(id)}
+        <div className="stream-compose-line">
+          <CharacterPicker
+            value={speaker}
+            characters={characters}
+            onLook={openLook}
+            label={`Change character for new moment: ${activeCharacter?.name || "The scene"}`}
+            allowScene={kind !== "speak"}
+            compact
+            onAdd={onAssets}
+            onChange={(id) => selectCharacter(id)}
+          />
+          {composeCollapsed && <button type="button" className="stream-compose-resume" onClick={() => setComposeCollapsed(false)}>
+            {pending.text?.trim() ? "Continue writing…" : "Add a moment"}
+          </button>}
+          <div className="stream-compose-writing" hidden={composeCollapsed} id={`moment-writing-${scene.id}`}>
+            <CanvasWriting
+              assets={displayAssets}
+              onMention={reference}
+              onLook={openLook}
+              quotedMentions
+              autoDirection
+              label="New moment"
+              inputRef={input}
+              onSubmit={submit}
+              placeholder={currentKind.placeholder}
+              value={pending.text || ""}
+              onChange={(text) => changeInput({ text })}
+              onDropAsset={(id, range) => {
+                const asset = allAssets.find((item) => item.id === id);
+                if (!asset || ["footage", "audio"].includes(asset.kind)) return;
+                const text = pending.text || "";
+                const start = range?.start ?? text.length;
+                changeInput({
+                  text:
+                    text.slice(0, start) +
+                    `@[${asset.name}] ` +
+                    text.slice(range?.end ?? start),
+                });
+                reference(asset);
+              }}
             />
-            {cast
-              .filter((asset) => asset.id !== speaker)
-              .map((asset) => (
-                <button
-                  type="button"
-                  className="stream-cast-choice"
-                  key={asset.id}
-                  aria-label={`Use ${asset.name} for new moment`}
-                  onClick={() => selectCharacter(asset.id)}
-                >
-                  <Portrait asset={asset} />
-                  <span>{asset.name}</span>
-                </button>
-              ))}
-            <button
-              type="button"
-              className="stream-add-cast"
-              onClick={onAssets}
-            >
-              <Plus size={14} /> Cast
-            </button>
           </div>
-          <small>Shot {shotIndex + 1}</small>
+          <button type="button" className="stream-compose-collapse"
+            aria-label={composeCollapsed ? "Expand moment input" : "Collapse moment input"}
+            title={composeCollapsed ? "Expand moment input" : "Collapse moment input"}
+            aria-expanded={!composeCollapsed}
+            aria-controls={`moment-writing-${scene.id} moment-actions-${scene.id}`}
+            onClick={() => { setComposeCollapsed(!composeCollapsed); setLookTarget(null); }}>
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
         </div>
-        <CanvasWriting
-          assets={allAssets}
-          onMention={reference}
-          quotedMentions
-          autoDirection
-          label="New moment"
-          inputRef={input}
-          onSubmit={submit}
-          placeholder={currentKind.placeholder}
-          value={pending.text || ""}
-          onChange={(text) => changeInput({ text })}
-          onDropAsset={(id, range) => {
-            const asset = allAssets.find((item) => item.id === id);
-            if (!asset || ["footage", "audio"].includes(asset.kind)) return;
-            const text = pending.text || "";
-            const start = range?.start ?? text.length;
-            changeInput({
-              text:
-                text.slice(0, start) +
-                `@[${asset.name}] ` +
-                text.slice(range?.end ?? start),
-            });
-            reference(asset);
-          }}
-        />
-        <div className="stream-compose-actions">
+        <div className="stream-compose-actions" hidden={composeCollapsed} id={`moment-actions-${scene.id}`}>
           <div role="group" aria-label="New moment type">
             {kinds.map(({ id, label, Icon }) => (
               <button
@@ -787,13 +795,15 @@ export function DialogueStream({
               !pending.text?.trim() || (kind === "speak" && !activeCharacter)
             }
           >
-            <Send size={17} />
+            <ArrowUp size={18} aria-hidden="true" />
           </button>
         </div>
       </form>
+      {lookTarget && <ComposerLookPicker asset={allAssets.find(a => a.id === lookTarget.id)} draft={draft} change={editDraft} allAssets={allAssets} anchor={lookTarget.anchor} onClose={() => setLookTarget(null)}/>}
       <span className="stream-status" role="status">
         {notice}
       </span>
+      </>}
     </section>
   );
 }

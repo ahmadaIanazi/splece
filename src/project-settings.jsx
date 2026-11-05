@@ -1,9 +1,12 @@
+import { GenerationQualitySettings } from "./generation-quality";
+import { AddonSettings } from "./addons";
 import { FolderSettings } from "./folder-settings";
 import { AppUpdates } from "./updates";
 import { ProjectVisuals } from "./project-visuals";
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import {
   Plug,
+  Package,
   Workflow,
   Film,
   AudioLines,
@@ -39,13 +42,15 @@ const settingLabels = {
   fps: "Frame rate",
 };
 const tabs = [
-  ["prompting", "Prompting", SlidersHorizontal],
+  ["project", "Project", Film],
+  ["prompting", "Advanced prompts", SlidersHorizontal],
   ["workflows", "Workflows", Workflow],
   ["video", "Video", Film],
   ["audio", "Audio", AudioLines],
   ["exports", "Exports", Download],
   ["folders", "Folders", Folder],
-  ["connections", "AI connections", Plug],
+  ["connections", "Connections", Plug],
+  ["addons", "Add-ons", Package],
   ["test", "Preview tools", FlaskConical],
   ["updates", "Updates", RotateCcw],
 ];
@@ -59,7 +64,7 @@ export function ProjectSettings({
   setHoldToGenerate,
   simulation,
   setSimulation,
-  initialTab = "prompting",
+  initialTab = "project",
   globalOnly = false,
   beforeUpdate,
 }) {
@@ -141,7 +146,7 @@ export function ProjectSettings({
         ))}
       </nav>
       <section className="settings-content">
-        {!["connections", "test", "updates", "folders"].includes(tab) && (
+        {!["project", "connections", "test", "updates", "folders", "addons"].includes(tab) && (
           <div className="settings-scope">
             <div
               className="sculpted-segments"
@@ -189,7 +194,7 @@ export function ProjectSettings({
           </div>
         )}
         {message && <p role="status">{message}</p>}
-        {tab === "folders" ? <FolderSettings project={globalOnly ? null : project} /> : tab === "updates" ? <AppUpdates beforeCheck={beforeUpdate} /> : tab === "connections" ? (
+        {tab === "project" ? <section className="settings-project-summary"><h2>{globalOnly ? "Studio defaults" : project.name}</h2><p>Everything for your project, in one place.</p><div className="settings-project-cards">{[["video","Video", "Generation defaults & format"],["audio","Sound","Voices, levels & mixing"],["exports","Export","Quality & frame rate"],["folders","Files","Project folder & storage"],["connections","Connections","Connections & providers"]].map(([id,label,detail])=><button key={id} onClick={()=>setTab(id)}><strong>{label}</strong><small>{detail}</small></button>)}</div></section> : tab === "folders" ? <FolderSettings project={globalOnly ? null : project} /> : tab === "updates" ? <AppUpdates beforeCheck={beforeUpdate} /> : tab === "connections" ? (
           <>
             <p className="muted">
               Connections are shared across projects. Keys stay on this
@@ -198,7 +203,7 @@ export function ProjectSettings({
             <Connections onChange={refreshVideoModels} />
 
           </>
-        ) : tab === "test" ? (
+        ) : tab === "addons" ? <AddonSettings /> : tab === "test" ? (
           <>
             <label className="field">
               <span>Sample preview behavior</span>
@@ -292,6 +297,7 @@ export function ProjectSettings({
               )}
               {tab === "video" && (
                 <>
+                  <GenerationQualitySettings value={settings.generationPresets} models={models} onChange={value=>change(p=>{p.settings.generationPresets=value;})}/>
                   <label className="field">
                     <span>Concurrent jobs</span>
                     <input

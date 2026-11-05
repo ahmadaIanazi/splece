@@ -5,14 +5,11 @@ import {
   ArrowRightToLine,
   X,
   Plus,
-  Clapperboard,
-  AudioLines,
-  Sparkles,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { takeSourceIn } from "../shared/repair.mjs";
 import { tc } from "./state";
-import "./timeline-insert-menu.css";
+import { TimelineInsertMenu } from "./timeline-insert-menu";
 
 export function TimelineFrameAction({
   clip,
@@ -24,8 +21,6 @@ export function TimelineFrameAction({
   onToggle,
   onUse,
   onInsert,
-  onInsertImage,
-  onInsertAudio,
   onConnectImages,
   onAttach,
   onDragStart,
@@ -34,7 +29,7 @@ export function TimelineFrameAction({
   const insertRoot = useRef(null);
   useEffect(() => {
     if (!insertOpen) return;
-    insertRoot.current?.querySelector(".frame-insert-options button")?.focus({ preventScroll: true });
+    insertRoot.current?.querySelector(".timeline-insert-menu button")?.focus({ preventScroll: true });
     const dismiss = event => {
       if (!insertRoot.current?.contains(event.target)) setInsertOpen(false);
     };
@@ -144,17 +139,15 @@ export function TimelineFrameAction({
             if (open) onToggle();
             setInsertOpen(value => !value);
           }}><Plus size={12} /></button>
-        {insertOpen && <div className="frame-insert-options" role="dialog" aria-label="Insert at playhead" style={{ left: Math.min(0, viewport.left + viewport.width - Math.max(viewport.left + 18, Math.min(time * zoom, viewport.left + viewport.width - 18)) - (onConnectImages ? 290 : 220)) }}>
-          {[
-            ["Video", Clapperboard, onInsert, "Create a clip prompt here"],
-            ["Image", Image, onInsertImage, "Import an image here"],
-            ["Audio", AudioLines, onInsertAudio, "Add audio from your library"],
-            ["Connect photos", Sparkles, onConnectImages, "Create a clip between these photographs"],
-          ].filter(([, , action]) => action).map(([label, Icon, action, title]) => <button type="button" key={label} title={title} onClick={() => {
+        {insertOpen && <TimelineInsertMenu
+          style={{ top: 70, left: Math.min(0, viewport.left + viewport.width - Math.max(viewport.left + 18, Math.min(time * zoom, viewport.left + viewport.width - 18)) - 292) }}
+          onChoose={onInsert}
+          onConnectPhotos={onConnectImages}
+          onClose={restoreFocus => {
             setInsertOpen(false);
-            action();
-          }}><Icon size={19} strokeWidth={1.5} /><span>{label}</span></button>)}
-        </div>}
+            if (restoreFocus) insertRoot.current?.querySelector(".frame-insert-trigger")?.focus();
+          }}
+        />}
       </div>
       {ghost &&
         createPortal(

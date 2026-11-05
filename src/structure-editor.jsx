@@ -51,7 +51,7 @@ export function GroupComposer({
             {path
               .slice(0, -1)
               .map((n) => n.title)
-              .join(" / ") || "Structure"}{" "}
+              .join(" / ") || "Plan"}{" "}
             · {structureLabel(plan, node)}
           </small>
           <h2>
@@ -74,8 +74,8 @@ export function GroupComposer({
           </button>
         )}
         <button
-          title="Open in Structure"
-          aria-label="Open group in Structure"
+          title="Open in Plan"
+          aria-label="Open group in Plan"
           onClick={onStructure}
         >
           <ArrowUpRight size={17} />

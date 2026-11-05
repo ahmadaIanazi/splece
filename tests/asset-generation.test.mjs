@@ -435,3 +435,20 @@ test('FireRed edits fit their live provider limit and omit unchanged identity pr
  const prompt=imageAssetPrompt(input,p).prompt;assert.ok(prompt.length<=1500);assert.ok(prompt.startsWith(input.description));assert.ok(!prompt.includes('x'.repeat(100)));
  assert.throws(()=>imageAssetPrompt({...input,description:'z'.repeat(1501)},p),/1,500/);
 });
+
+test("Open image direction does not impose portrait framing, studio lighting or a fixed style", () => {
+  const input=normalizeImageInput({assetId:"a",kind:"character",mode:"create",modelId:"venice-grok",description:"Full body watercolor teacher jumping in a neon garden",framing:"auto",look:"auto",ratio:"1:1"});
+  const built=imageAssetPrompt(input,upgradeProject(newProject("Open styling")));
+  assert.match(built.prompt,/watercolor teacher jumping/);
+  assert.doesNotMatch(built.prompt,/Single close-up portrait|plain warm-grey studio backdrop|soft even light, restrained contrast/);
+  assert.equal(input.ratio,"1:1");
+});
+
+test("Editing an alternate look does not inject its unchanged wardrobe as a new instruction", () => {
+  const p=upgradeProject(newProject("Alternate look"));
+  p.assets=[{id:"a",kind:"character",media:{id:"main"},visualBrief:{wardrobe:"Red coat"},variants:[{media:{id:"alt"},visualBrief:{wardrobe:"Blue coat"}}]}];
+  const input=normalizeImageInput({assetId:"a",kind:"character",mode:"vary",modelId:"venice-firered",sourceMediaId:"alt",description:"Change the coat to green",visualBrief:{wardrobe:"Blue coat"},framing:"auto"});
+  const built=imageAssetPrompt(input,p);
+  assert.match(built.prompt,/coat to green/);
+  assert.doesNotMatch(built.prompt,/Blue coat|Red coat/);
+});

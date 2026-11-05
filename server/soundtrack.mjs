@@ -113,7 +113,7 @@ export function createSoundtrackService({
       );
     return new FalSoundtrackAdapter({
       key,
-      allowSubmit: async () => (await studioMode(data)) === "live",
+      allowSubmit: async () => (await studioMode(data, "audio")) === "live",
     });
   },
   visual = soundtrackVisual,
@@ -230,7 +230,7 @@ export function createSoundtrackService({
   }
   async function estimate(projectId, options) {
     const { run } = plan(projectId, options);
-    const mode = (await studioMode(data)) === "live" ? "live" : "test";
+    const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
     const rate =
       mode === "live" && run.units.some(u => u.role === "effect" || (u.role === "ambience" && !u.model)) ? await price() : SOUND_RATE;
     const dialogueRate =
@@ -329,7 +329,7 @@ export function createSoundtrackService({
   }
   async function retryEstimate(projectId, runId, body) {
     const ctx = retryContext(projectId, runId, body);
-    const mode = (await studioMode(data)) === "live" ? "live" : "test";
+    const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
     if (mode !== ctx.run.executionMode)
       throw Error(
         `Switch to ${ctx.run.executionMode === "live" ? "Online" : "Offline"} to resume this saved pass.`,
@@ -380,7 +380,7 @@ export function createSoundtrackService({
       input:
         ctx.unit.role === "dialogue"
           ? dialogueInput(ctx.unit.lines[ctx.part.index])
-          : model === AMBIENCE_MODEL ? ambienceInput(soundPrompt({ ...ctx.run, direction: ctx.direction }, ctx.unit, ctx.part).prompt, ctx.part) : {
+          : model === AMBIENCE_MODEL ? ambienceInput(soundPrompt({ ...ctx.run, direction: ctx.direction }, ctx.unit, ctx.part).prompt, ctx.part, ctx.unit.role) : {
               ...soundPrompt(
                 { ...ctx.run, direction: ctx.direction },
                 ctx.unit,
@@ -403,7 +403,7 @@ export function createSoundtrackService({
       previous.retryRequests?.includes(body.requestId)
     )
       return previous;
-    const mode = (await studioMode(data)) === "live" ? "live" : "test";
+    const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
     // Re-read all state after the asynchronous mode read. No awaits below the commit checks.
     const raced = get(runId);
     if (
@@ -477,7 +477,7 @@ export function createSoundtrackService({
     return ctx.run;
   }
   async function liveStep(run, unit, output, folder) {
-    if ((await studioMode(data)) !== "live") {
+    if ((await studioMode(data, "audio")) !== "live") {
       if (unit.stage !== "Paused · switch to Online to continue") {
         unit.stage = "Paused · switch to Online to continue";
         save(run);
@@ -524,7 +524,7 @@ export function createSoundtrackService({
       }
       if (part.nextPollAt > Date.now()) return false;
       if (!part.providerJobId) {
-        unit.stage = `${unit.role === "dialogue" ? "Preparing dialogue" : "Preparing visuals"} · ${part.index + 1}/${unit.parts.length}`;
+        unit.stage = `${unit.role === "dialogue" ? "Preparing dialogue" : part.model === AMBIENCE_MODEL ? "Preparing sound cues" : "Preparing visuals"} · ${part.index + 1}/${unit.parts.length}`;
         save(run);
         const partFolder = path.join(work, String(part.index));
         const speech = unit.role === "dialogue";
@@ -551,7 +551,7 @@ export function createSoundtrackService({
             await adapter.submitSound(
               speech
                 ? prompt
-                : ambience ? ambienceInput(prompt.prompt, part) : {
+                : ambience ? ambienceInput(prompt.prompt, part, unit.role) : {
                     video_url,
                     ...prompt,
                     duration: part.modelDuration,
@@ -817,22 +817,28 @@ export function createSoundtrackService({
     async fitTiming(projectId,runId,body) {
       const source=get(runId),unit=source?.units.find(u=>u.id===body.unitId);
       const existing=list(projectId).find(r=>r.timingSourceRunId===runId && r.timingSourceUnitId===body.unitId);
-      if(existing)return existing;
+      if(existing){
+        if(!soundReceipts(store.get(projectId).project).has(existing.units[0].id)) {
+          delete existing.units[0].delivered;save(existing);
+        }
+        return existing;
+      }
       if(source?.projectId!==projectId || unit?.role!=="dialogue" || unit.state!=="ready" || !(unit.needsTiming || unit.media?.duration > unit.duration + .02)) throw Error("Choose a completed dialogue recording that needs timing.");
       const record=store.get(projectId), current=soundUnitState(record.project,unit);
       if(current.stale) throw Error("The picture or script changed. Update this section first.");
       const media=store.media(unit.media.id);
       const speed=media.duration/Math.max(.2,unit.duration-.02);
-      if(speed>1.5) throw Error("This recording needs more picture time. Shorten the line or extend the clip; a faster voice would sound unnatural.");
+      if(speed*Math.max(1,...(unit.parts||[]).map(p=>p.tempo||1))>1.5) throw Error("This recording needs more picture time. Shorten the line or extend the clip; a faster voice would sound unnatural.");
       const replacement=structuredClone(unit), id=randomUUID();
       const output=path.join(record.project.folder,"media","soundtrack",id+".wav");
       const {run:render,probe}=await import("./media.mjs");
       await render(["-i",media.path,"-af",`atempo=${speed},apad`,"-t",String(unit.duration),"-c:a","pcm_s16le",output]);
       const info=await probe(output);
+      delete replacement.delivered;
       replacement.id=id;replacement.needsTiming=false;replacement.outputDuration=info.duration;
       replacement.media={...unit.media,id,path:output,original:output,duration:info.duration,url:"/api/media/"+id};
       replacement.originalMedia=unit.media;
-      replacement.parts=(replacement.parts||[]).map(p=>({...p,actualStart:(p.actualStart??p.start)/speed,actualDuration:(p.actualDuration??p.audioDuration??p.duration)/speed}));
+      replacement.parts=(replacement.parts||[]).map(p=>({...p,tempo:(p.tempo||1)*speed,actualStart:(p.actualStart??p.start)/speed,actualDuration:(p.actualDuration??p.audioDuration??p.duration)/speed}));
       const result={...source,id:randomUUID(),state:"ready",createdAt:new Date().toISOString(),units:[replacement],cost:0,estimate:{amount:0},executionMode:"test",providerId:"local-timing",timingSourceRunId:source.id,timingSourceUnitId:unit.id};
       store.putMedia(replacement.media); save(result);
       return result;
@@ -865,7 +871,7 @@ export function createSoundtrackService({
       clearInterval(timer);
     },
     async submit(projectId, options) {
-      const mode = (await studioMode(data)) === "live" ? "live" : "test";
+      const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
       if (options.executionMode && options.executionMode !== mode)
         throw Object.assign(
           Error(
@@ -914,7 +920,7 @@ export function createSoundtrackService({
       } else run.estimate = soundEstimate(run);
       run.cost = mode === "test" ? 0 : null;
       run.units.forEach((u) => {
-        u.parts = soundParts(u).map(part => ({...part, rate: run.estimate.layers.find(l => l.role === u.role)?.rate ?? run.estimate.rate}));
+        u.parts = soundParts(u).map(part => ({...part, rate: run.estimate.layers.find(l => l.role === u.role)?.rates?.[part.model] ?? run.estimate.layers.find(l => l.role === u.role)?.rate ?? run.estimate.rate}));
       });
       run.requestId = String(options.requestId || randomUUID()).slice(0, 100);
       // Credentials/pricing checks await IO. Recheck after that gap to deduplicate concurrent tabs.
@@ -929,7 +935,7 @@ export function createSoundtrackService({
         );
       if (mode === "live") {
         const quote = quotes.get(options.quoteId);
-        if ((await studioMode(data)) !== "live")
+        if ((await studioMode(data, "audio")) !== "live")
           throw Object.assign(
             Error(
               "The estimate was used or mode changed. Review a new estimate.",
@@ -980,7 +986,7 @@ export function createSoundtrackService({
       cancelled.add(runId);
       run.state = "cancelled";
       save(run);
-      if (run.executionMode === "live" && (await studioMode(data)) === "live") {
+      if (run.executionMode === "live" && (await studioMode(data, "audio")) === "live") {
         const adapter = await adapterFactory();
         for (const unit of run.units)
           for (const part of unit.parts || [])
@@ -1026,7 +1032,7 @@ export function createSoundtrackService({
         throw Error(
           "The provider rejected this section. Adjust its direction or range and create a new generation with a fresh estimate. Resume cannot repair a rejected request.",
         );
-      const mode = (await studioMode(data)) === "live" ? "live" : "test";
+      const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
       if (mode !== run.executionMode)
         throw Error(
           `Switch to ${run.executionMode === "live" ? "Online" : "Offline"} to resume this soundtrack.`,

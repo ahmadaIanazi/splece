@@ -1,19 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Plus, Clapperboard, Layers, Archive } from "lucide-react";
+import { Plus } from "lucide-react";
 import { tc } from "./state";
+import { TimelineInsertMenu } from "./timeline-insert-menu";
 
 export function TimelineInsertions({
   clips,
   zoom,
   viewport,
   onInsert,
-  onPool,
+  getConnectPhotos,
 }) {
   const root = useRef(null);
   const [hover, setHover] = useState(null),
     [menu, setMenu] = useState(null);
   const ordered = [...clips].sort((a, b) => a.start - b.start);
-  const cuts = [...new Set([0, ...ordered.map((c) => c.start + c.duration)])];
+  const cuts = [...new Set([0, ...ordered.flatMap(c => [c.start, c.start + c.duration])])];
   const signature = cuts.join(",");
   useEffect(() => {
     const lane = root.current?.parentElement;
@@ -67,16 +68,10 @@ export function TimelineInsertions({
               zoom +
             16,
         }}
-        aria-label="Add next clip prompt"
-        title="New clip · project default duration"
-        onClick={() =>
-          onInsert(
-            "clip",
-            ordered.length
-              ? Math.max(...ordered.map((c) => c.start + c.duration))
-              : 0,
-          )
-        }
+        aria-label="Insert at end"
+        title="Add at end"
+        aria-haspopup="dialog"
+        onClick={() => setMenu(ordered.length ? Math.max(...ordered.map(c => c.start + c.duration)) : 0)}
       >
         <Plus size={19} />
       </button>
@@ -99,43 +94,21 @@ export function TimelineInsertions({
               aria-label={`Insert at ${tc(at)}`}
               title="Add at this cut"
               aria-expanded={menu === at}
+              aria-haspopup="dialog"
               onClick={() => setMenu(menu === at ? null : at)}
             >
               <Plus size={15} />
             </button>
             {menu === at && (
-              <div
-                className={`timeline-cut-menu ${at * zoom - viewport.left > viewport.width - 190 ? "align-end" : ""}`}
-              >
-                <small>Insert at {tc(at)}</small>
-                <button
-                  onClick={() => {
-                    setMenu(null);
-                    onInsert("clip", at);
-                  }}
-                >
-                  <Clapperboard size={15} />
-                  Add clip
-                </button>
-                <button
-                  onClick={() => {
-                    setMenu(null);
-                    onInsert("group", at);
-                  }}
-                >
-                  <Layers size={15} />
-                  Add group
-                </button>
-                <button
-                  onClick={() => {
-                    setMenu(null);
-                    onPool(at);
-                  }}
-                >
-                  <Archive size={15} />
-                  From generation pool
-                </button>
-              </div>
+              <TimelineInsertMenu
+                style={{ top: 28, left: at * zoom - viewport.left > viewport.width - 292 ? -280 : 0 }}
+                onChoose={kind => onInsert(kind, at)}
+                onConnectPhotos={getConnectPhotos?.(at)}
+                onClose={restoreFocus => {
+                  setMenu(null);
+                  if (restoreFocus) root.current?.querySelector(`[aria-label="Insert at ${tc(at)}"]`)?.focus();
+                }}
+              />
             )}
           </div>
         ))}

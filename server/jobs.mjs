@@ -1,3 +1,4 @@
+import {exportFileName} from "../shared/export-presentation.mjs";
 import { renderTreatment } from "./clip-treatment.mjs";
 import { isLiveJob, providerId } from "../shared/providers.mjs";
 import { providerTiming } from "../shared/job-progress.mjs";
@@ -81,7 +82,7 @@ export function startWorker({
       }
       if (j.kind === "export") {
         save(j, "rendering");
-        const out = path.join(p.folder, "exports", j.id + ".mp4");
+        const out = path.join(p.folder, "exports", exportFileName(j.snapshot.fileName || p.name).replace(/\.mp4$/i, "") + " - " + j.id.slice(0,8) + ".mp4");
         await fs.mkdir(path.dirname(out), { recursive: true });
         await renderEpisode(
           j.snapshot.clips,

@@ -1,6 +1,6 @@
 import { composerEvents } from "./composer-sequence.mjs";
 import { actionTimingGuide } from "./shot-direction.mjs";
-export const preservationGuide = `Rewrite the selected video model's prompt into clear, natural language while preserving the director's creative intent. Strengthen physical positioning, contact, clothing state, visible anatomy, object details, spatial relationships, realism, core action sequence, explicit camera direction, atmosphere and requested sound. Do not sanitize, generalize away or invent these details. Do not add characters or change the core action. Auto means unspecified: do not invent mandatory camera, movement or delivery instructions. Never mention missing inputs or unavailable start/end frames. Copy every Scene N cast control:, camera control:, speech control: and action control: line exactly. ${actionTimingGuide} Treat wider story context as planning information, never permission to add cast or dialogue. Copy the [Reference roles] section exactly. Copy the [Clip continuity] section exactly, preserving planned versus confirmed evidence. Copy every numbered reference role line (@Image, @Element, or Image N) exactly at the top. Preserve all spoken dialogue word-for-word and its speaker. Preserve every saved voice identity line exactly; do not change a character’s accent, language or voice profile. Copy the original Negative block exactly at the end. The prompt field contains only the enhanced prompt; explanations and asset decisions belong outside that field. If these requirements conflict with a model limit, report the conflict instead of deleting protected content.`;
+export const preservationGuide = `Rewrite the selected video model's prompt into clear, natural language while preserving the director's creative intent. Strengthen physical positioning, contact, clothing state, visible anatomy, object details, spatial relationships, realism, core action sequence, explicit camera direction, atmosphere and requested sound. Do not sanitize, generalize away or invent these details. Do not add characters or change the core action. Auto means unspecified: do not invent mandatory camera, movement or delivery instructions. Never mention missing inputs or unavailable start/end frames. Copy every Scene N cast control:, camera control:, speech control: and action control: line exactly. ${actionTimingGuide} Treat wider story context as planning information, never permission to add cast or dialogue. Copy the [Sound direction] section exactly. Copy the [Reference roles] section exactly. Copy the [Clip continuity] section exactly, preserving planned versus confirmed evidence. Copy every numbered reference role line (@Image, @Element, or Image N) exactly at the top. Preserve all spoken dialogue word-for-word and its speaker. Preserve every saved voice identity line exactly; do not change a character’s accent, language or voice profile. Copy the original Negative block exactly at the end. The prompt field contains only the enhanced prompt; explanations and asset decisions belong outside that field. If these requirements conflict with a model limit, report the conflict instead of deleting protected content.`;
 export function sourceTexts(d) {
   return [
     d.general,
@@ -12,6 +12,7 @@ export function sourceTexts(d) {
 export function protectedContent(d, compiledText = "") {
   const texts = sourceTexts(d);
   return {
+    sound: compiledText.match(/(?:^|\n)(\[Sound direction\]\n[^]*?)(?=\n\n\[|$)/)?.[1]?.trimEnd() || "",
     referenceRoles: compiledText.match(/(?:^|\n)(\[Reference roles\]\n[^]*?)(?=\n\n\[|$)/)?.[1]?.trimEnd() || "",
     continuity: compiledText.match(/(?:^|\n)(\[Clip continuity\]\n[^]*?)(?=\n\n\[|$)/)?.[1]?.trimEnd() || "",
     creative: compiledText.match(/(?:^|\n)(\[Creative direction\]\n[^]*?)(?=\n\n\[|$)/)?.[1]?.trimEnd() || "",
@@ -61,6 +62,8 @@ export function orderProtectedPrompt(text, d) {
     .join("\n");
 }
 export function assertProtectedPrompt(prompt, protectedParts) {
+  if (protectedParts.sound && !prompt.includes(protectedParts.sound))
+    throw Error("Enhanced prompt changed native sound direction. Nothing applied.");
   if (protectedParts.referenceRoles && !prompt.includes(protectedParts.referenceRoles))
     throw Error("Enhanced prompt changed reference roles. Nothing applied.");
   if (protectedParts.continuity && !prompt.includes(protectedParts.continuity))

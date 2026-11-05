@@ -114,13 +114,13 @@ test("A21 structured variants are selected transparently and historical copies r
   d.scenes[0].text = "Mira walks through winter snow.";
   let r = resolveReferences(p, d);
   assert.equal(r[0].selectedVariant.id, "winter");
-  assert.match(r[0].selectionOrigin, /keyword/);
+  assert.match(r[0].selectionOrigin, /analyzed look match/);
   d.referenceOptions.hero = { variantId: "summer", role: "identity" };
   assert.equal(resolveReferences(p, d)[0].selectedVariant.id, "summer");
   editAsset(p, { ...p.assets[0], description: "Later identity" });
   assert.equal(p.assets[0].version, 2);
   assert.equal(p.assets[0].history[0].description, "Curly hair");
-  assert.equal(r[0].description, "Curly hair");
+  assert.equal(r[0].description, "Wool coat"); // resolved look remains unchanged after editing the character
 });
 test("A22 prepared manual text is protected and prompt limit errors never truncate writing", () => {
   const p = project(),

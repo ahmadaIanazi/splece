@@ -120,7 +120,7 @@ export function createLipSyncService({
   adapterFactory = async () =>
     new FalSoundtrackAdapter({
       key: await credentials(data, "fal").key(),
-      allowSubmit: async () => (await studioMode(data)) === "live",
+      allowSubmit: async () => (await studioMode(data, "audio")) === "live",
     }),
   prepare = prepareLipSync,
   upload = uploadFalMedia,
@@ -167,7 +167,7 @@ export function createLipSyncService({
   }
   async function estimate(id, body) {
     const ctx = context(id, body),
-      mode = (await studioMode(data)) === "live" ? "live" : "test";
+      mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
     const rate =
       mode === "live"
         ? await (
@@ -192,7 +192,7 @@ export function createLipSyncService({
     return q;
   }
   async function submit(id, body) {
-    const mode = (await studioMode(data)) === "live" ? "live" : "test";
+    const mode = (await studioMode(data, "audio")) === "live" ? "live" : "test";
     const existing = list(id).find(
       (j) => body.requestId && j.requestId === body.requestId,
     );
@@ -250,7 +250,7 @@ export function createLipSyncService({
         save(job);
         return;
       }
-      if (job.executionMode === "live" && (await studioMode(data)) !== "live")
+      if (job.executionMode === "live" && (await studioMode(data, "audio")) !== "live")
         return;
       if (
         !job.input.segments &&
@@ -279,7 +279,7 @@ export function createLipSyncService({
           upload,
           download,
           liveAllowed: async () =>
-            !closed && (await studioMode(data)) === "live",
+            !closed && (await studioMode(data, "audio")) === "live",
         });
         if (!done) return;
       } else if (job.executionMode === "test") {
@@ -311,7 +311,7 @@ export function createLipSyncService({
           save(job);
           const prepared = await prepare(job.input, work, store);
           // Recheck mode after media preparation, before any paid call.
-          if ((await studioMode(data)) !== "live") return;
+          if ((await studioMode(data, "audio")) !== "live") return;
           if (prepared.picture && prepared.voice) {
             job.stage = "Uploading picture and voice";
             save(job);
@@ -326,7 +326,7 @@ export function createLipSyncService({
               "audio/wav",
             );
           }
-          if ((await studioMode(data)) !== "live") return;
+          if ((await studioMode(data, "audio")) !== "live") return;
           job.state = "submitting";
           save(job);
           try {

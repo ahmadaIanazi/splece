@@ -25,8 +25,8 @@ test('normalization does not coerce objects, mixed lists, IDs or oversized text'
  assert.throws(()=>validateStorySetup({minorCharacters:[]},[]),/must be text/);
 });
 test('saved Live-format outline can be replayed locally and applied once with exact dialogue and references',async()=>{
- const p=newProject('Ms. Noora regression');p.assets=[];
- const input={action:'conversation',planningMessage:'Ms. Noora introduces herself and Sous, a cute bird.',plan:structuredClone(storyPlan(p)),assets:[],episodeId:p.episodeId};
+ const p=newProject('The teacher regression');p.assets=[];
+ const input={action:'conversation',planningMessage:'The teacher introduces herself and a small bird.',plan:structuredClone(storyPlan(p)),assets:[],episodeId:p.episodeId};
  const raw=conversationFixture(input);raw.setup.minorCharacters=[];
  const actor=raw.characters[0].id;raw.beats.find(b=>b.nodeType==='clip').dialogue=[{speaker:actor,text:'مرحباً! أنا المعلمة نورة.',delivery:'Warmly',direction:''}];
  let calls=0,request;const result=await requestStory(input,{mode:'deepseek',model:'local-replay'},'not-a-provider-key',async(url,options)=>{

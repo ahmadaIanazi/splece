@@ -71,3 +71,15 @@ test("image description instructions make the image authoritative and cover deta
   assert.match(assetUnderstandingInstructions, /face shape, eyes/);
   assert.match(assetUnderstandingInstructions, /Never identify real people/);
 });
+
+test('background image analysis refreshes untouched editor fields without losing typing', async () => {
+  const {refreshAssetEdit}=await import('../shared/asset-edit.mjs');
+  const before={id:'a',name:'photo',description:'',libraryTags:[],imageAnalysis:'Reading image…'};
+  const incoming={...before,description:'A blue vase',libraryTags:['blue','vase'],imageAnalysis:'Image described and tagged'};
+  assert.equal(refreshAssetEdit(before,before,incoming).description,'A blue vase');
+  const local={...before,description:'My manual description'};
+  const refreshed=refreshAssetEdit(before,local,incoming);
+  assert.equal(refreshed.description,'My manual description');
+  assert.deepEqual(refreshed.libraryTags,['blue','vase']);
+  assert.equal(refreshed.imageAnalysis,'Image described and tagged');
+});

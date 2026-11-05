@@ -402,6 +402,7 @@ test("visual windows stitch trimmed picture without source audio; overlapping ou
       await renderTestSound({ role: "ambience", duration: 3 }, files[i]);
     const output = path.join(folder, "joined.wav");
     await joinSoundtrack(parts, files, output, 5);
+    assert.ok((await fs.stat(output)).size < 1_000_000, "normalization must not leave a 192 kHz browser playback file");
     assert.equal((await probe(output)).duration, 5);
   }));
 

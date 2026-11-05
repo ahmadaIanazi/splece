@@ -568,27 +568,341 @@
     min-height: 260px;
   }
 }
-.imagine-control-scroll > * { flex-shrink: 0; }
-.imagine-reference-drop {display:flex;align-items:center;gap:10px;background:var(--surface-raised);border-radius:12px;min-height:74px;padding:10px;}
-.imagine-reference-drop > img {width:52px;height:60px;object-fit:cover;border-radius:8px;}
-.imagine-reference-drop > span {flex:1;}
-.imagine-reference-drop button {display:flex;align-items:center;gap:10px;background:none;border:0;color:var(--text-secondary);padding:8px;text-align:start;}
-.imagine-reference-drop b,.imagine-reference-drop small {display:block;font-size:11px;}
-.imagine-reference-drop small {margin-top:5px;font-size:10px;color:var(--text-secondary);}
-.imagine-use-upload {display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--accent);font-size:11px;}
-.imagine-brief label {display:block;margin-top:12px;}
-.imagine-brief textarea {min-height:58px;}
-.imagine-brief > button,.imagine-brief-suggestion button {display:inline-flex;gap:6px;align-items:center;padding:8px 10px;border:0;background:var(--surface-raised);color:var(--text-primary);border-radius:9px;font-size:11px;margin:8px 5px 0 0;}
-.imagine-brief-suggestion {font-size:11px;line-height:1.6;color:var(--text-secondary);}
-.imagine-brief-suggestion b {display:block;color:var(--text-primary);}
-.imagine-model-button {display:flex;align-items:center;gap:7px;background:transparent;border:0;color:var(--text-secondary);font-size:11px;}
-.imagine-model-options {display:grid;gap:6px;}
-.imagine-model-options button {text-align:start;padding:10px 12px;border:1px solid transparent;border-radius:10px;background:var(--surface-raised);color:var(--text-primary);}
-.imagine-model-options button[aria-pressed=true] {border-color:var(--accent);}
-.imagine-model-options small,.imagine-model-options span {display:block;color:var(--text-secondary);margin-top:4px;font-size:10px;}
-.imagine-output-controls .imagine-model-button {width:auto;max-width:190px;height:auto;min-height:34px;white-space:nowrap;padding:8px;background:transparent;}
-.imagine-model-button svg {flex-shrink:0;}
-.imagine-quick-looks > div {margin-top:10px;}
-.imagine-generation-footer {position:relative;}
-.imagine-model-options {position:absolute;bottom:100%;inset-inline:0;z-index:2;padding:10px;background:var(--surface-panel);border-radius:12px;box-shadow:0 8px 24px #0005;max-height:240px;overflow:auto;}
-.imagine-controls input[hidden] {display:none;}
+.imagine-control-scroll > * {
+  flex-shrink: 0;
+}
+.imagine-reference-drop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-raised);
+  border-radius: 12px;
+  min-height: 74px;
+  padding: 10px;
+}
+.imagine-reference-drop > img {
+  width: 52px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.imagine-reference-drop > span {
+  flex: 1;
+}
+.imagine-reference-drop button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  color: var(--text-secondary);
+  padding: 8px;
+  text-align: start;
+}
+.imagine-reference-drop b,
+.imagine-reference-drop small {
+  display: block;
+  font-size: 11px;
+}
+.imagine-reference-drop small {
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.imagine-use-upload {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 11px;
+}
+.imagine-brief label {
+  display: block;
+  margin-top: 12px;
+}
+.imagine-brief textarea {
+  min-height: 58px;
+}
+.imagine-brief > button,
+.imagine-brief-suggestion button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 0;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 9px;
+  font-size: 11px;
+  margin: 8px 5px 0 0;
+}
+.imagine-brief-suggestion {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.imagine-brief-suggestion b {
+  display: block;
+  color: var(--text-primary);
+}
+.imagine-model-button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.imagine-model-options {
+  display: grid;
+  gap: 6px;
+}
+.imagine-model-options button {
+  text-align: start;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.imagine-model-options button[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+.imagine-model-options small,
+.imagine-model-options span {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-size: 10px;
+}
+.imagine-output-controls .imagine-model-button {
+  width: auto;
+  max-width: 190px;
+  height: auto;
+  min-height: 34px;
+  white-space: nowrap;
+  padding: 8px;
+  background: transparent;
+}
+.imagine-model-button svg {
+  flex-shrink: 0;
+}
+.imagine-quick-looks > div {
+  margin-top: 10px;
+}
+.imagine-generation-footer {
+  position: relative;
+}
+.imagine-model-options {
+  position: absolute;
+  bottom: 100%;
+  inset-inline: 0;
+  z-index: 2;
+  padding: 10px;
+  background: var(--surface-panel);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #0005;
+  max-height: 240px;
+  overflow: auto;
+}
+.imagine-controls input[hidden] {
+  display: none;
+}
+
+/* One reference, one direction, with optional model choices. */
+.imagine-reference-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+.imagine-reference-actions button,
+.imagine-suggest-variation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+.imagine-suggest-variation {
+  margin: 0 0 12px;
+}
+.imagine-suggestion-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.imagine-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.imagine-library button {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  text-align: left;
+  gap: 5px;
+  border-radius: 8px;
+}
+.imagine-library img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.imagine-library span {
+  font-size: 11px;
+}
+.imagine-reference-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+}
+.imagine-reference-preview > img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--surface-recessed);
+}
+.imagine-reference-preview > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.imagine-reference-preview span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.imagine-reference-preview button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  background: var(--accent-active);
+  color: var(--text-on-accent, #07111f);
+  white-space: nowrap;
+}
+.imagine-output-controls > small {
+  font-size: 11px;
+  color: var(--text-secondary);
+  max-width: 160px;
+  line-height: 1.5;
+}
+.imagine-candidate-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.imagine-candidate-count select {
+  padding: 8px;
+  border-radius: 8px;
+}
+.imagine-model-options > small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.imagine-control-scroll .imagine-suggest-variation {
+  width: fit-content;
+  align-self: flex-end;
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+  padding: 2px 4px;
+  min-height: 28px;
+  margin-top: -12px;
+  margin-bottom: 0;
+}
+.imagine-reference-actions {
+  margin: 0;
+}
+.imagine-reference-preview {
+  flex: 1;
+}
+.imagine-reference-preview > img {
+  flex: 1;
+  min-height: 0;
+}
+.character-sheet:has(.asset-imagine) .imagine-workspace {
+  height: clamp(300px, calc(100dvh - 230px), 680px);
+}
+@media (max-width: 650px) {
+  .character-sheet:has(.asset-imagine) .imagine-workspace {
+    height: auto;
+  }
+  .imagine-reference-preview > img {
+    flex: none;
+    min-height: 180px;
+  }
+}
+.imagine-direction-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.imagine-direction-heading > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.imagine-control-scroll .imagine-direction-heading .imagine-suggest-variation {
+  margin: 0;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.character-sheet .imagine-control-scroll {
+  gap: 12px;
+}
+.character-sheet:has(.asset-imagine) .character-identity > * {
+  flex-shrink: 0;
+}
+@media (max-width: 1100px) {
+  .character-sheet:has(.asset-imagine) {
+    overflow: auto;
+    height: auto;
+  }
+  .character-sheet:has(.asset-imagine) .character-identity {
+    overflow: visible;
+  }
+  .character-sheet:has(.asset-imagine) .character-looks-workspace,
+  .character-sheet .asset-imagine {
+    display: block;
+  }
+  .character-sheet:has(.asset-imagine) .imagine-workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 24px;
+  }
+  .character-sheet .imagine-controls,
+  .character-sheet .imagine-results,
+  .character-sheet .imagine-control-scroll {
+    overflow: visible;
+  }
+  .character-sheet .imagine-reference-preview {
+    flex: none;
+  }
+  .character-sheet .imagine-reference-preview > img {
+    height: 280px;
+    flex: none;
+  }
+  .character-sheet .imagine-results-empty {
+    min-height: 240px;
+  }
+  .character-sheet .imagine-result-grid {
+    min-height: 280px;
+  }
+}

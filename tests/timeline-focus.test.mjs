@@ -26,3 +26,9 @@ test("dialogue fitting caps acceleration, preserves complete line duration and s
  assert.ok(fitted[1].start>=fitted[0].duration+.12);
  assert.ok(fitted[1].speed>=1&&fitted[1].speed<=1.2);
 });
+
+test("soloing a lip-matched video keeps its applied dialogue audible",()=>{
+ const clips=[{id:"voice",mute:false,volume:.8},{id:"bed",mute:false,volume:.3}];
+ assert.deepEqual(auditionAudio(clips,{kind:"video",id:"picture",audioId:"voice"}).map(a=>a.mute),[false,true]);
+ assert.deepEqual(auditionAudio(clips,{kind:"video",id:"original-picture"}).map(a=>a.mute),[true,true]);
+});

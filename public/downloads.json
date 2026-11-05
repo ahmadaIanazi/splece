@@ -1,6 +1,7 @@
 {
-  "version": "0.1.0",
-  "mac": null,
-  "windows": null,
-  "source": "/downloads/splece-source-0.1.0.zip"
+  "version": "0.1.4-beta",
+  "mac": "https://www.splece.com/beta/",
+  "windows": "https://www.splece.com/beta/windows/",
+  "linux": "https://www.splece.com/beta/linux/",
+  "source": "https://github.com/ahmadaIanazi/splece"
 }

@@ -1,6 +1,11 @@
+import { studioOnline } from './online.mjs';
 import fs from "node:fs/promises";
 import path from "node:path";
-export async function studioMode(data) {
+export async function studioMode(data, lane) {
+  if (!(await studioOnline(data))) return "test";
+  if (lane) {
+    try {const routes=JSON.parse(await fs.readFile(path.join(data,'ai-routing.json'),'utf8'));if(routes[lane])return routes[lane].enabled?'live':'test';} catch(e){if(e.code!=='ENOENT')throw e;}
+  }
   try {
     return JSON.parse(
       await fs.readFile(path.join(data, "studio-mode.json"), "utf8"),

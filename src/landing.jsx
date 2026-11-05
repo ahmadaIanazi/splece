@@ -79,7 +79,7 @@ const faqs = [
   ],
   [
     "When can I download it or see the source?",
-    "Splece is in beta. Choose your system below for current downloads and installation instructions. The public source repository and license are being prepared; follow @ahmadaIanazi on GitHub for the release.",
+    "Splece is in beta. Choose your system below for current downloads and installation instructions. The source is available on GitHub under Apache 2.0. iOS and Android are coming soon.",
   ],
   [
     "Do I need a powerful graphics card?",
@@ -90,36 +90,6 @@ const faqs = [
     "You can edit and export media already on your computer offline. Online AI and downloads need internet. To move a project, save a portable checkpoint and copy its entire folder, including media and the hidden .frame folder. Keep the local service running and your computer awake while background jobs work.",
   ],
 ];
-function ProductPreview() {
-  return (
-    <figure className="lp-real-preview">
-      <a
-        href="/marketing/splece-editor.webp"
-        target="_blank"
-        rel="noreferrer"
-        aria-label="View the real Splece editor screenshot at full size"
-      >
-        <img
-          src="/marketing/splece-editor.webp"
-          alt="Splece’s real editor with a prompt canvas, coastal film preview, multiple takes and a video timeline."
-          width="1280"
-          height="720"
-          fetchPriority="high"
-        />
-        <span className="lp-expand-preview">
-          <ArrowUpRight size={16} aria-hidden="true" /> Explore the editor, full
-          size
-        </span>
-      </a>
-      <figcaption>
-        <span>
-          <i aria-hidden="true" /> The actual Splece editor
-        </span>
-        <span>Staged project · AI-generated demo imagery</span>
-      </figcaption>
-    </figure>
-  );
-}
 function LocalWorkflow() {
   return (
     <section
@@ -276,7 +246,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
             <nav aria-label="Main navigation">
               <a href="#workflow">The workflow</a>
               <a href="#how-it-works">Local by design</a>
-              <a href="#questions">Questions</a>
+              <a href="https://github.com/ahmadaIanazi/splece/blob/main/docs/guide/README.md" target="_blank" rel="noreferrer">Docs</a>
             </nav>
             <a
               className="lp-nav-cta"
@@ -297,26 +267,19 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                   VIDEO GENERATOR + EDITOR
                 </div>
                 <h1 id="hero-title">
-                  AI makes the takes.
+                  Less imagining.
                   <br />
-                  <span>You make the film.</span>
+                  <span>More “I made this.”</span>
                 </h1>
               </div>
               <div className="lp-hero-intro">
                 <p>
-                  A canvas for your ideas. An editor for every better take.
-                  Built from the ground up for AI video.
+                  Free. Open source. Local by design.<br />
+                  Bring your own API keys.
                 </p>
-                <div className="lp-hero-actions">
-                  <a className="lp-button lp-button-primary" href="#download">
-                    Get to know Splece{" "}
-                    <ArrowDown size={17} aria-hidden="true" />
-                  </a>
-                  <span className="lp-preview-label">Preview release</span>
-                </div>
               </div>
             </div>
-            <ProductPreview />
+            <figure className="lp-real-preview"><a href="/marketing/splece-editor.webp" target="_blank" rel="noreferrer" aria-label="View the full editor screenshot"><img src="/marketing/splece-editor.webp" alt="Splece’s real desktop editor with staged AI footage, preview and timeline" width="1280" height="720" fetchPriority="high" /></a></figure>
             <div className="lp-opening-foot">
               <div
                 className="lp-principles"
@@ -416,11 +379,12 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                   <h3>Open source. Your creative freedom.</h3>
                   <p>
                     Original code licensed under Apache 2.0, created by Ahmad
-                    Alanazi. The public repository is being prepared. The Splece
+                    Alanazi. Explore the source on GitHub. The Splece
                     name and logo remain reserved.
                   </p>
-                  <a className="lp-text-link" href="https://github.com/ahmadaIanazi" target="_blank" rel="noreferrer">
-                    Follow the creator{" "}
+                  <p>iOS and Android are coming soon.</p>
+                  <a className="lp-text-link" href="https://github.com/ahmadaIanazi/splece" target="_blank" rel="noreferrer">
+                    View on GitHub{" "}
                     <ArrowUpRight size={15} aria-hidden="true" />
                   </a>
                 </div>
@@ -588,8 +552,8 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                     <strong>Designed for a simple install</strong>
                     <span>
                       The desktop packages include the app runtime and video
-                      tools. Developer tools are only needed if you choose to
-                      run from source.
+                      tools. Source development and optional local add-ons
+                      have separate requirements.
                     </span>
                   </p>
                 </div>
@@ -740,7 +704,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
         </a>
         <span>A little direction. Endless possibility.</span>
         <a href="#download">
-          Mac & Windows <ArrowUpRight size={15} aria-hidden="true" />
+          Desktop downloads <ArrowUpRight size={15} aria-hidden="true" />
         </a>
       </footer>
     </div>

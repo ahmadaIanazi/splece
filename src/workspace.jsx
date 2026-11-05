@@ -2,11 +2,9 @@ import { shortcutHint } from "../shared/editor-shortcuts.mjs";
 import { BillingHeader } from "./billing";
 import React, { useState } from "react";
 import {
-  BookOpen,
   Settings,
   Undo2,
   Redo2,
-  Clapperboard,
   Check,
   LoaderCircle,
   CircleAlert,
@@ -17,7 +15,6 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
-import { StudioMode } from "./mode";
 
 // A stored preference wins over the initial layout suggestion. Panels remain
 // mounted when hidden, so locally edited form fields are never discarded.
@@ -71,8 +68,6 @@ export function PanelHeading({ title, collapsed, onToggle, side = "left" }) {
 export function WorkspaceHeader({
   assistantControl,
   project,
-  workspace,
-  onWorkspace,
   onHome,
   status,
   onTool,
@@ -145,23 +140,6 @@ export function WorkspaceHeader({
           )}
         </div>
       </div>
-      <nav className="workspace-switcher" aria-label="Workspace">
-        {[
-          ["story", "Structure", BookOpen],
-          ["editor", "Editor", Clapperboard],
-        ].map(([value, label, Icon]) => (
-          <button
-            key={value}
-            aria-label={label}
-            title={label}
-            aria-current={workspace === value ? "page" : undefined}
-            onClick={() => onWorkspace(value)}
-          >
-            <Icon size={16} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
       <div className="workspace-utilities">
         <BillingHeader
           billing={billing}
@@ -169,7 +147,6 @@ export function WorkspaceHeader({
           onConnections={() => onTool("connections")}
         />
         {assistantControl}
-        <StudioMode />
         <button
           className="icon queue-control"
           title={`Jobs & exports · ${jobCount} active`}
@@ -187,16 +164,14 @@ export function WorkspaceHeader({
         >
           <Settings size={17} />
         </button>
-        {workspace === "editor" && (
-          <button
+        <button
             className="export"
             aria-label="Export video"
             onClick={() => onTool("export")}
           >
             <Download size={15} />
             <span>Export</span>
-          </button>
-        )}
+        </button>
       </div>
     </header>
   );

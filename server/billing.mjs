@@ -1,3 +1,5 @@
+import {readRouting} from "./ai-routing.mjs";
+import { effectCostRecord } from '../shared/effects.mjs';
 import {assetAnalysisCost} from "./asset-intelligence.mjs";
 import {imageCostRecord} from "../shared/asset-generation.mjs";
 import { assistantCostRecords } from "./composer-assistant.mjs";
@@ -127,7 +129,7 @@ export function createBillingService({
   data,
   settings,
   transport = providerTransport({ demo: false, timeoutMs: 15000 }),
-  mode = () => studioMode(data),
+  mode = async () => Object.values(await readRouting(data)).some(r=>r.enabled)?"live":"test",
   now = () => Date.now(),
 }) {
   store.db.exec(
@@ -359,8 +361,9 @@ export function createBillingService({
         ...assistantCostRecords(store, project.id),
         ...textJobs("image_jobs", project.id).map(imageCostRecord),
         ...textJobs("asset_analyses", project.id).filter(j=>j.state!=="quoted").map(assetAnalysisCost),
-        ...textJobs("photo_analyses", project.id).filter(j=>j.state!=='quoted').map(j=>({key:'vision:'+j.id,id:j.id,kind:'vision',provider:'venice',test:j.executionMode!=='live',state:j.state,title:'Photo understanding',model:j.model,createdAt:j.createdAt,amount:j.executionMode!=='live'||!j.attempted?0:null,status:j.executionMode!=='live'?'test':j.attempted?'unknown':'not-submitted',charges:[]})),
+        ...textJobs("photo_analyses", project.id).filter(j=>j.state!=='quoted').map(j=>({key:'vision:'+j.id,id:j.id,kind:'vision',provider:j.config?.provider||'venice',test:j.executionMode!=='live',state:j.state,title:'Photo understanding',model:j.model,createdAt:j.createdAt,amount:j.executionMode!=='live'||!j.attempted?0:null,status:j.executionMode!=='live'?'test':j.attempted?'unknown':'not-submitted',charges:[]})),
         ...textJobs("lip_sync_jobs", project.id).map(lipSyncCosts),
+        ...textJobs("effect_jobs", project.id).map(effectCostRecord),
         ...textJobs("soundtrack_runs", project.id).flatMap(
           soundtrackCostRecords,
         ),

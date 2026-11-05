@@ -165,6 +165,10 @@ export async function joinSoundtrack(parts, files, output, duration, role = "eff
       filters.join(";"),
       "-map",
       "[leveled]",
+      "-ar",
+      "48000",
+      "-ac",
+      "2",
       "-t",
       String(duration),
       "-c:a",
@@ -180,7 +184,7 @@ export async function joinSoundtrack(parts, files, output, duration, role = "eff
   }
 }
 
-// Speech is never cropped or sped up to force a fit. Keep the full performance.
+// Keep every word. Optional bounded, pitch-preserving pacing fits short overruns.
 export async function dialogueDownload(url, output) {
   const source = output + ".speech",
     temp = output + ".partial.wav";

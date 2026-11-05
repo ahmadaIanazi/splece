@@ -89,12 +89,13 @@ export function ProjectStart({ onClose, onCreate }) {
     });
     el?.focus();
   };
-  async function create() {
+  async function create(start = "plan") {
     if (busy) return;
     setBusy(true);
     setError("");
     try {
-      await onCreate(draft);
+      const body = start === "blank" ? { ...emptyDraft, name: draft.name, folder: draft.folder, includeSample: false } : draft;
+      await onCreate(body, { start });
       try {
         localStorage.removeItem("splece-project-start");
       } catch {}
@@ -153,14 +154,15 @@ export function ProjectStart({ onClose, onCreate }) {
               )}
             </div>
           </div>
-          <button
+          <div className="starter-entry-actions"><button
             className="primary starter-create"
             disabled={busy}
-            onClick={create}
+            onClick={() => create("plan")}
           >
-            {busy ? "Creating…" : "Create project"}
+            {busy ? "Creating…" : "Start planning"}
             <ArrowRight size={15} />
           </button>
+          <button className="starter-skip" disabled={busy} onClick={() => create("blank")}>Start creating</button></div>
         </div>
         <div className="starter-scroll-area">
           <TemplateBrowser

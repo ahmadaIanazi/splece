@@ -1,3 +1,6 @@
+import {exportFileName,exportSummary} from "../shared/export-presentation.mjs";
+import { LookChoices } from "./composer-look-picker";
+import { chooseLook } from "../shared/look-selection.mjs";
 import { ReferenceRoleControl } from "./clip-continuity";
 import { isLiveJob } from "../shared/providers.mjs";
 import React, { useState, useEffect } from "react";
@@ -283,10 +286,10 @@ export function ReferenceOptions({ asset, draft, change, project }) {
     });
   return (
     <div className="reference-options">
-      <select
+      {asset.kind === "character" ? <LookChoices asset={asset} draft={draft} change={change} allAssets={project?.assets}/> : <select
         aria-label={asset.name + " variant"}
         value={value.variantId || "auto"}
-        onChange={(e) => set("variantId", e.target.value)}
+        onChange={(e) => change(d => chooseLook(d, asset.id, e.target.value))}
       >
         <option value="auto">Auto · match context</option>
         <option value="none">Base appearance only</option>
@@ -295,7 +298,7 @@ export function ReferenceOptions({ asset, draft, change, project }) {
             {v.name}
           </option>
         ))}
-      </select>
+      </select>}
       {project ? <ReferenceRoleControl asset={asset} draft={draft} project={project} onChange={option => change(d => {
         d.referenceOptions ??= {};
         d.referenceOptions[asset.id] = { ...d.referenceOptions[asset.id], ...option };
@@ -608,8 +611,14 @@ export function HistoryPanel({ project, update }) {
 }
 export function ExportProfile({ project, update, onExport }) {
   const issues = timelineIssues(project.clips);
+  const summary = exportSummary(project);
+  const [filename,setFilename]=useState(exportFileName(project.name));
   return (
-    <div>
+    <div className="export-profile">
+      <header><h2>{project.name}</h2><p>{summary.duration.toFixed(1)} seconds · {summary.clips} clips · {summary.audio} added audio tracks{summary.elements ? ` · ${summary.elements} element${summary.elements===1?"":"s"}` : ""}{summary.muted ? ` · ${summary.muted} muted` : ""}</p></header>
+      <label className="field"><span>File name</span><input value={filename} onChange={e=>setFilename(e.target.value)} aria-label="Export file name"/></label>
+      <p className="export-destination">Saved in this project’s Exports folder.<br/><small title={project.folder}>{project.folder?.split("/").at(-1)}</small></p>
+      <details className="export-options"><summary>Quality · {project.settings.export.resolution} · {project.settings.export.aspect} · {project.settings.export.fps} fps</summary>
       <div className="details-grid">
         {[
           ["aspect", ["16:9", "9:16", "1:1", "4:5"]],
@@ -636,6 +645,7 @@ export function ExportProfile({ project, update, onExport }) {
           </label>
         ))}
       </div>
+      </details>
       {issues.map((i, k) => (
         <p className="error" key={k}>
           {i.message}
@@ -659,11 +669,10 @@ export function ExportProfile({ project, update, onExport }) {
         </button>
       )}
       <p className="muted">
-        H.264 / AAC MP4. Includes footage framing, animated elements, selected takes,
-        trims, audio tracks and fades. Timeline notes stay in the editor.
+        Your current edit, including selected versions, framing, text, animation and sound.
       </p>
-      <button className="primary" disabled={!!issues.length} onClick={onExport}>
-        <Download size={15} /> Render episode locally
+      <button className="primary" disabled={!!issues.length || (!summary.clips && !summary.elements)} onClick={()=>onExport(exportFileName(filename))}>
+        <Download size={15} /> Export video
       </button>
     </div>
   );

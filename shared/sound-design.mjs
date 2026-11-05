@@ -89,11 +89,11 @@ export const AMBIENCE_RATE = {
   checkedAt: "2026-10-24",
   basis: "published",
 };
-export function ambienceInput(prompt, part) {
+export function ambienceInput(prompt, part, role = "ambience") {
   return {
     text: prompt.slice(0, 450),
     duration_seconds: part.modelDuration,
-    loop: true,
+    loop: role === "ambience",
     prompt_influence: 0.7,
     output_format: "mp3_44100_192",
   };

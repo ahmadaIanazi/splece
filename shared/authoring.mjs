@@ -1,3 +1,6 @@
+import { selectableLooks } from "./look-selection.mjs";
+import { validSoundSource } from "./video-sound-continuity.mjs";
+import { normalizeVideoSound } from "./video-sound.mjs";
 import { composerEvents, saveComposerEvents, eventKinds, eventRelations } from "./composer-sequence.mjs";
 import { normalizeDesk, deskPrompt } from "./director-desk.mjs";
 import { validateContinuity } from "./clip-continuity.mjs";
@@ -160,6 +163,8 @@ export function exportPrompt(p, d, compiled, models = []) {
     "referenceOptions",
     "continuity",
     "creativeDirection",
+    "videoSound",
+    "soundContinuity",
     "automation",
     "sectionOverrides",
     "frameOverrides",
@@ -169,9 +174,9 @@ export function exportPrompt(p, d, compiled, models = []) {
   ];
   return {
     ...clone(promptContract),
-    composer: Object.fromEntries(
+    composer: { ...Object.fromEntries(
       keys.filter((k) => d[k] !== undefined).map((k) => [k, clone(d[k])]),
-    ),
+    ), ...(compiled.soundReference ? {soundContinuity:{enabled:true,source:clone(compiled.soundReference)}} : {}) },
     injections: {
       text: compiled.text,
       sections: compiled.sections,
@@ -318,12 +323,13 @@ export function importPrompt(value, p, models) {
     if (
       v &&
       !["auto", "none"].includes(v) &&
-      !a.variants?.some((x) => x.id === v)
+      !selectableLooks(a).some((x) => x.id === v) && !a.variants?.some((x) => x.id === v)
     )
       throw Error(`Unknown appearance variant for ${a.name}.`);
     if (option.targetAssetId && !p.assets.some(x => x.id === option.targetAssetId)) throw Error("Unknown reference target.");
     referenceOptions[id] = {
       variantId: v || "auto",
+      ...(option.lookLocked !== undefined ? { lookLocked: !!option.lookLocked } : {}),
       role: text(option.role || "", "Reference role", 500),
       ...(option.targetAssetId ? { targetAssetId: option.targetAssetId } : {}),
       required: !!option.required,
@@ -390,6 +396,16 @@ export function importPrompt(value, p, models) {
       frameOverrides[k] = { mode: v.mode, frame: clone(frame) };
     }
   }
+  let soundContinuity;
+  if (c.soundContinuity) {
+    soundContinuity = {enabled:c.soundContinuity.enabled === true};
+    const source=c.soundContinuity.source;
+    if (source) {
+      if (!validSoundSource(source) || !p.clips.some(clip => clip.id === source.clipId && clip.takes?.some(take => take.id === source.takeId && take.jobId)))
+        throw Error("The saved sound source is not available in this project. Choose a local previous clip first.");
+      soundContinuity.source={clipId:source.clipId,takeId:source.takeId,start:source.start,duration:source.duration};
+    }
+  }
   const result = {
     id: crypto.randomUUID(),
     episodeId: p.episodeId,
@@ -403,6 +419,8 @@ export function importPrompt(value, p, models) {
     contextNotes: text(c.contextNotes || "", "Context"),
     referenceIds,
     referenceOptions,
+    ...(soundContinuity ? {soundContinuity} : {}),
+    ...(c.videoSound ? {videoSound: normalizeVideoSound(c.videoSound)} : {}),
     ...(c.creativeDirection ? {creativeDirection: normalizeCreativeDirection(c.creativeDirection)} : {}),
     ...(c.continuity ? { continuity: validateContinuity(c.continuity, p) } : {}),
     scenes,

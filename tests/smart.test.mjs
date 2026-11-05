@@ -32,6 +32,7 @@ const fixture = () => {
           name: "Winter coat",
           description: "Wool coat",
           tags: { clothing: "winter" },
+          media: {id:"winter-reference",kind:"image",url:"/test/winter.png"},
         },
       ],
     },

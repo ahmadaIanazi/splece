@@ -1,3 +1,5 @@
+import { selectedLook, lookMedia, isManualLook } from "./look-selection.mjs";
+import { effectiveVideoSound, videoSoundAvailability } from "./video-sound.mjs";
 import { syncAssistantInheritance } from "./composer-assistant.mjs";
 import { projectVisualReferences } from "./creative-presets.mjs";
 import { projectReferenceDraft } from "./asset-scope.mjs";
@@ -81,38 +83,23 @@ export function effectiveAutomation(p, d) {
     ),
   );
 }
-const words = (s) =>
-  String(s || "")
-    .toLowerCase()
-    .match(/[\p{L}\p{N}]+/gu) || [];
 export function resolveReferences(p, d, { projectVisuals = true } = {}) {
   const defaults = projectVisuals ? projectVisualReferences(p,d) : [];
-  const context = new Set(
-    words([d.general, d.notes, ...d.scenes.map((s) => s.text)].join(" ")),
-  );
   return p.assets
     .filter((a) => d.referenceIds.includes(a.id) || defaults.some(r=>r.assetId===a.id))
     .map((a) => {
       const visual = !d.referenceIds.includes(a.id) && defaults.find(r=>r.assetId===a.id);
       const option = d.referenceOptions?.[a.id] || (visual ? {role:visual.role,variantId:"none"} : {});
-      const ranked = (a.variants || [])
-        .map((v) => ({
-          v,
-          score: words(
-            [v.name, v.description, ...Object.values(v.tags || {})].join(" "),
-          ).reduce((n, w) => n + Number(context.has(w)), 0),
-        }))
-        .sort((a, b) => b.score - a.score);
-      const variant =
-        option.variantId === "none"
-          ? null
-          : option.variantId && option.variantId !== "auto"
-            ? (a.variants || []).find((v) => v.id === option.variantId)
-            : ranked[0]?.score > 0
-              ? ranked[0].v
-              : null;
+      const variant = selectedLook(a, { ...d, referenceOptions: { ...d.referenceOptions, [a.id]: option } }, p.assets);
+      const media = lookMedia(a, variant);
       return {
         ...structuredClone(a),
+        ...(a.kind === "character" && variant ? {
+          description: variant.description || "",
+          variant: "",
+          visualBrief: variant.visualBrief || {},
+          lookTags: variant.tags || {},
+        } : {}),
         ...(visual ? { projectVisualRole: visual.role, kind: "style" } : {}),
         selectedVariant: variant ? structuredClone(variant) : null,
         role:
@@ -125,17 +112,10 @@ export function resolveReferences(p, d, { projectVisuals = true } = {}) {
         targetName: p.assets.find(x => x.id === option.targetAssetId)?.name || "",
         targetAssetId: option.targetAssetId || null,
         required: !!option.required,
-        selectionOrigin:
-          d.assistant?.appearances?.[a.id] === "following" ? "Composer Assistant" : option.variantId && option.variantId !== "auto"
-            ? "manual"
-            : "automatic keyword match",
-        selectedMedia: variant?.media || a.media || null,
-        selectedMediaList: [
-          variant?.media || a.media,
-          ...(variant ? variant.mediaList || [] : a.mediaList || []),
-        ]
-          .filter(Boolean)
-          .filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i),
+        selectionOrigin: isManualLook(d, a.id) ? "manual" : d.assistant?.appearances?.[a.id] === "following" ? "Composer Assistant" : "analyzed look match",
+        selectedMedia: media[0] || null,
+        selectedMediaList: media,
+
       };
     });
 }
@@ -149,9 +129,14 @@ export function resolveBoundary(d, key, automatic) {
 export function validatePreparation(p, d, compiled, model) {
   const errors = [],
     warnings = [];
+  const soundAvailability = videoSoundAvailability(model, d.settings);
+  if (effectiveVideoSound(p,d).enabled && !soundAvailability.ready) warnings.push({code:"native-sound", message:soundAvailability.reason});
   for (const key of ["start","end"]) {
     const waiting = d.frameOverrides?.[key];
     if (waiting?.mode === "waiting" && !p.clips.some(c=>c.id === waiting.clipId && c.takes?.some(t=>t.id===c.activeTake))) errors.push({code:"frame-pending",message:`Waiting for the ${key} frame’s source footage. Generate that clip first, or remove this frame dependency.`});
+  }
+  for (const reference of compiled.references) {
+    if (reference.selectedVariant?.unavailable) errors.push({ code: "look-unavailable", message: `${reference.name}’s selected look is no longer available. Choose another look before generating.` });
   }
   const attached = new Set(compiled.references.map(r=>r.id));
   const writing = (d.scenes || []).map(s=>s.text || "").join(" ").toLowerCase();
@@ -258,9 +243,9 @@ export function validatePreparation(p, d, compiled, model) {
       compiled.boundaries[key] &&
       (!model?.frames || (key === "end" && model.endFrame === false))
     )
-      warnings.push({
+      errors.push({
         code: "frame",
-        message: `${key} frame retained in draft; unsupported by this model and not sent.`,
+        message: `This model cannot accept the ${key} frame. Remove that frame or choose a model with frame support. Your image is kept.`,
       });
   for (const s of d.scenes)
     for (const line of s.dialogue)
@@ -432,6 +417,8 @@ export function reuseGeneration(project, snapshot) {
     mapping[ref.id] = copy.id;
     project.assets.push(copy);
   }
+  if (snapshot.compiled.soundReference) d.videoSound = effectiveVideoSound({settings:snapshot.template}, snapshot.draft);
+  d.soundContinuity = snapshot.compiled.soundReference ? {enabled:true,source:structuredClone(snapshot.compiled.soundReference)} : {enabled:false};
   d.id = uid();
   d.episodeId = project.episodeId;
   d.closed = false;
@@ -469,6 +456,7 @@ export function reuseGeneration(project, snapshot) {
   d.sectionOverrides = Object.fromEntries(
     snapshot.compiled.sections.map((s) => [s.label, s.text]),
   );
+  if (!Object.hasOwn(d.sectionOverrides, "Sound direction")) d.sectionOverrides["Sound direction"] = "";
   // Reuse freezes the absence of creative choices too, including future timeline defaults.
   if (!Object.hasOwn(d.sectionOverrides, "Creative direction")) d.sectionOverrides["Creative direction"] = "";
   // Reuse freezes the absence of creative choices too, even in a styled project.

@@ -1,0 +1,524 @@
+.workspace-mode-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.workspace-mode-tabs button {
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.workspace-mode-tabs button[aria-selected="true"] {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.composer-tab-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.composer-tab-content[hidden] {
+  display: none;
+}
+.effects-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  color: var(--text-primary);
+  font-size: 12px;
+  height: 100%;
+  padding: 0 12px 16px;
+  gap: 12px;
+}
+.effects-panel > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0 0;
+}
+.effects-panel p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 4px 0;
+}
+.effects-panel small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.effects-panel button {
+  min-height: 32px;
+}
+.effects-panel button:focus-visible,
+.workspace-mode-tabs button:focus-visible {
+  outline: 2px solid var(--accent-active);
+  outline-offset: 2px;
+}
+.effects-catalog {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+}
+.effects-catalog nav {
+  border-right: 1px solid var(--border);
+  padding-right: 8px;
+}
+.effects-catalog nav button {
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 4px;
+}
+.effect-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  width: 100%;
+  max-width: 190px;
+  align-items: stretch;
+}
+.effect-thumbnail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1.25;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.effect-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.effect-thumbnail span {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  background: var(--panel);
+  border-radius: 4px;
+  font-weight: 600;
+}
+.effect-card strong,
+.effect-card small {
+  padding: 0 2px;
+}
+.effects-catalog p {
+  margin-top: 16px;
+}
+.effect-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.effect-detail h2 {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+.effect-back {
+  align-self: flex-start;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  color: var(--muted);
+}
+.effect-detail label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+.effect-detail select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+}
+.effect-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.effect-input img {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.effect-input span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.effect-input strong {
+  overflow-wrap: anywhere;
+}
+.effect-mode,
+.effect-estimate {
+  padding: 12px;
+  background: var(--surface-raised);
+  border-radius: 8px;
+}
+.effect-estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.effect-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.effect-results article {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.effect-results article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.effect-results ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+}
+.effect-results li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.effect-error {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.effects-catalog {
+  display: block;
+}
+.effects-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.effects-catalog-grid > p {
+  grid-column: 1/-1;
+}
+.effect-thumbnail svg {
+  width: 80%;
+  height: auto;
+}
+.morph-frames,
+.morph-endpoints {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.morph-frames > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.morph-frames img,
+.morph-endpoints img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+  background: var(--surface-raised);
+  border-radius: 6px;
+}
+.morph-presets {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.morph-presets legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.morph-presets button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  gap: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 0;
+}
+.morph-presets button[aria-pressed="true"] {
+  border-color: var(--accent-active);
+  box-shadow: inset 0 0 0 1px var(--accent-active);
+}
+.morph-presets svg {
+  height: 46px;
+  width: 100%;
+  color: var(--accent-active);
+}
+.morph-presets small {
+  font-size: 11px;
+}
+.morph-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.morph-prompt {
+  white-space: pre-line;
+}
+.morph-result {
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px;
+}
+.morph-result video {
+  width: 100%;
+  max-height: 240px;
+  background: var(--surface-raised);
+  border-radius: 8px;
+}
+.effect-detail textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 62px;
+}
+.effect-detail summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+/* Effects share the composer's timing and frame surfaces. */
+.effect-timing {
+  padding: 8px 0 0;
+}
+.effect-timing .creative-time-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.effect-timing .creative-frame {
+  flex: 1;
+  min-width: 0;
+}
+.effect-timing .creative-duration {
+  flex: none;
+  font-size: 15px;
+}
+.effect-timing .creative-ruler {
+  margin: 12px 6px 24px;
+}
+.effect-context-label {
+  font-size: 12px;
+}
+.effect-frame-caption {
+  font-size: 11px;
+}
+.effect-movements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.effect-movements button,
+.effect-scope button {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.effect-movements button[aria-pressed="true"],
+.effect-scope button[aria-pressed="true"] {
+  background: var(--surface-raised);
+  border-color: var(--accent-active);
+  color: var(--text-primary);
+}
+.effect-scope {
+  display: flex;
+  gap: 6px;
+}
+.effect-options {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.effect-options summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.effect-options label {
+  margin-top: 12px;
+}
+.effect-guidance {
+  font-weight: 400 !important;
+}
+.effect-frame-picker {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+}
+.effect-frame-picker > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.effect-frame-picker .boundary-source-grid {
+  max-height: 160px;
+  overflow: auto;
+}
+.effect-frame-picker details {
+  margin-top: 10px;
+}
+.effect-range {
+  padding: 8px 4px;
+}
+.effect-range label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.effect-range input[type="number"] {
+  width: 70px;
+}
+.effect-range .creative-ruler {
+  margin: 14px 6px 24px;
+}
+.effect-transition-symbol {
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.effect-results article > div.morph-result {
+  display: flex;
+}
+.effect-mode {
+  font-size: 11px;
+  padding: 8px 10px;
+}
+.effect-estimate {
+  padding: 8px 10px;
+}
+.effects-catalog-grid .effect-thumbnail {
+  aspect-ratio: 1.6;
+}
+.effects-panel .effect-timing {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 80px;
+  grid-template-rows: 24px 42px;
+  gap: 0 12px;
+  padding: 4px 0 8px;
+}
+.effects-panel .effect-timing .creative-time-heading {
+  display: contents;
+}
+.effects-panel .effect-timing .creative-duration {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+}
+.effects-panel .effect-timing .creative-ruler {
+  grid-column: 2;
+  grid-row: 2;
+  width: calc(100% - 6px);
+  margin: 0 3px;
+  align-self: center;
+}
+.effects-panel .effect-timing .creative-frame {
+  grid-row: 1/3;
+  width: 80px;
+  height: 66px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: transparent;
+  padding: 0 0 13px !important;
+}
+.effects-panel .effect-timing .creative-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.effects-panel .effect-timing .creative-frame:hover {
+  border-color: var(--accent-active);
+}
+.effect-results[hidden] {
+  display: none;
+}
+.effect-thumbnail .effect-transition-symbol {
+  position: static;
+  background: transparent;
+  font-size: 28px;
+  font-weight: 400;
+}
+.effect-generate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+.effect-job-details summary {
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.effect-detail {
+  gap: 10px;
+}
+.effect-frame-caption {
+  font-size: 10px !important;
+  line-height: 1.45 !important;
+}
+.effects-panel .creative-ruler input {
+  position: absolute;
+  inset: -6px 0 auto;
+  width: 100%;
+  height: 36px;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.effects-panel > header {
+  gap: 8px;
+}
+.effects-panel > header > strong {
+  flex: 1;
+}

@@ -7,7 +7,8 @@ export function nextTimelineFocus(state, target, control = false) {
 }
 export function auditionAudio(clips, solo) {
   if (!solo || solo.kind === "element") return clips;
-  return clips.map(c => ({...c, mute: solo.kind !== "audio" || c.id !== solo.id, ...(c.id === solo.id ? {volume:c.volume || 1} : {})}));
+  const audioId=solo.kind === "audio" ? solo.id : solo.audioId;
+  return clips.map(c => ({...c, mute: c.id !== audioId, ...(c.id === audioId ? {volume:c.volume || 1} : {})}));
 }
 export function auditionSource(clip, solo) {
   if (!clip || !solo || solo.kind === "element") return clip;

@@ -32,6 +32,7 @@ credentials.json
 
 # Local evidence, experiments, exports and caches
 /artifacts/
+/.recovery/
 /design/logo-explorations/
 /design/brand/
 /tmp/

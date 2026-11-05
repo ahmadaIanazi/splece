@@ -1,4 +1,68 @@
 /* Composer-only styling. The editor, preview and timeline retain their layout. */
+.creative-composer .composer-timing-bar {
+  flex:none;
+  display:grid;
+  grid-template-columns:auto minmax(70px,1fr) auto;
+  align-items:center;
+  gap:16px;
+  margin:0 18px 6px;
+  padding:4px 0 10px;
+  border-bottom:1px solid var(--divider);
+}
+.creative-composer .composer-boundary-button {
+  min-height:44px;
+  gap:7px;
+  padding:4px;
+  background:transparent;
+  border-radius:8px;
+  color:var(--text-secondary);
+  font-size:12px;
+  white-space:nowrap;
+}
+.creative-composer .composer-boundary-button:hover,
+.creative-composer .composer-boundary-button[aria-expanded="true"] {
+  background:var(--selection-fill);
+  color:var(--text-primary);
+}
+.composer-boundary-preview {
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:28px;
+  flex:none;
+  overflow:hidden;
+  border:1px dashed var(--divider);
+  border-radius:5px;
+}
+.composer-boundary-preview:has(img) { border-style:solid; }
+.composer-boundary-preview img { width:100%; height:100%; object-fit:cover; }
+.dragging-timeline-frame .composer-boundary-button { outline:1px dashed var(--category-timing); }
+.dragging-timeline-frame .composer-boundary-button.frame-drop-hover {
+  outline:2px solid var(--category-timing);
+  background:var(--selection-fill);
+}
+.composer-timing-duration { min-width:0; text-align:center; }
+.creative-composer .composer-timing-duration > button {
+  min-height:24px;
+  padding:0 6px;
+  font-size:12px;
+  background:transparent;
+  border-radius:6px;
+}
+.composer-timing-duration .creative-ruler { height:24px; margin:4px 3px 0; }
+.composer-timing-duration .creative-ruler-label { display:none; }
+.composer-timing-duration .creative-ruler-band { height:16px; border-radius:3px; }
+.composer-timing-duration .creative-ruler > i { height:20px; }
+.creative-composer .composer-timing-duration .creative-ruler input { top:-6px; height:30px; }
+@container (max-width:420px) {
+  .creative-composer .composer-timing-bar { gap:10px; margin-inline:12px; }
+  .creative-composer .composer-boundary-button { flex-direction:column; gap:3px; font-size:11px; }
+  .composer-boundary-preview { width:36px; height:24px; }
+}
+@media (pointer:coarse) {
+  .creative-composer .composer-timing-bar { padding-block:8px 14px; }
+  .creative-composer .composer-timing-duration .creative-ruler input { top:-6px; height:44px; }
+}
 .creative-composer {
   --cc-muted: var(--text-secondary);
   --cc-blue: #8db9fb;
@@ -1939,3 +2003,22 @@
 .optimizer-options label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; }
 .optimizer-options select { max-width: 65%; background: var(--surface-panel); color: var(--text); border: 0; border-radius: 6px; padding: 6px; }
 .canvas-camera-trigger span { overflow: hidden; text-overflow: ellipsis; max-width: 94px; }
+
+/* One continuous pill, with an independent, keyboard-accessible quality selector. */
+.generation-pill { display: inline-flex; align-items: stretch; flex-shrink: 0; }
+.generation-pill.has-quality { border-radius: 999px; background: var(--pc-primary, #0866ff); color: white; }
+.generation-pill-selector { position: relative; width: 36px; flex-shrink: 0; display: grid; place-items: center; }
+.generation-pill-selector::after { content: ''; position: absolute; right: 0; top: 25%; bottom: 25%; width: 1px; background: #ffffff55; pointer-events: none; }
+.generation-pill-selector select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.generation-pill-selector span { pointer-events: none; font-size: 20px; line-height: 1; transform: translateY(-2px); }
+.generation-pill-selector:focus-within { outline: 2px solid white; outline-offset: 2px; border-radius: 999px 0 0 999px; }
+.generation-pill.has-quality .creative-generate { border-radius: 0 999px 999px 0; background: transparent; min-width: 0; }
+.generation-pill.has-quality.is-final { background: #c52b39; }
+.generation-pill.has-quality.is-final .creative-generate:hover:not(:disabled) { background: #aa2330; }
+.generation-quality-settings { margin-bottom: 24px; }
+.generation-quality-settings p, .generation-quality-settings small { color: var(--text-muted, #9aa5b8); line-height: 1.5; }
+.creative-composer.prompt-composer-apple .generation-pill.has-quality .creative-generate { background: transparent; border-radius: 0 999px 999px 0; }
+.creative-composer.prompt-composer-apple .generation-pill.has-quality.is-final .creative-generate:hover:not(:disabled) { background: #aa2330; }
+.generation-pill .creative-generate:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+.generation-pill:not(.has-quality) { display: contents; }
+.generation-pill-selector span { display: flex; transform: none; }

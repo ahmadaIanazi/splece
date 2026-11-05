@@ -7,10 +7,10 @@ import {
   imageModels,
   normalizeImageInput,
   imageAssetPrompt,
-  imageRatios,
+  imageDimensions,
 } from "../shared/asset-generation.mjs";
 import { providerTransport } from "./security.mjs";
-import { credentials } from "./connections.mjs";
+import { credentials, readJSON } from "./connections.mjs";
 import { studioMode } from "./mode.mjs";
 import { FalAdapter, falQueueURL } from "./adapters/fal.mjs";
 import { downloadVideo } from "./video.mjs";
@@ -29,7 +29,14 @@ export async function boundedImage(response) {
 }
 export function imagePayload(input, prompt, base64) {
   const model = imageModels.find((m) => m.id === input.modelId),
-    [width, height] = imageRatios[input.ratio];
+    [width, height] = imageDimensions(input);
+  if (model.provider === 'xai') {
+    const sources=(Array.isArray(base64) ? base64 : base64 ? [base64] : []).map(b=>({type:'image_url',url:`data:image/png;base64,${b}`}));
+    if (input.mode === 'vary' && (!sources.length || sources.length > 5)) throw Error('Grok edits need 1–5 reference images.');
+    return {model:model.model,prompt,n:1,response_format:'b64_json',resolution:'1k',aspect_ratio:input.ratio,
+      quality:input.mode === 'vary' ? 'medium' : 'low',
+      ...(input.mode === 'vary' ? sources.length === 1 ? {image:sources[0]} : {images:sources} : {})};
+  }
   if (model.provider === "fal")
     return {
       prompt,
@@ -67,7 +74,7 @@ export function createImageService({
   data,
   checkpoint = async () => {},
   transport = providerTransport({ demo: false, timeoutMs: 180000 }),
-  mode = () => studioMode(data),
+  mode = () => studioMode(data, "image"),
   download = downloadVideo,
   render = run,
 }) {
@@ -107,7 +114,7 @@ export function createImageService({
     const key = await credentials(data, provider).key();
     if (!key)
       throw Error(
-        `Connect ${provider === "fal" ? "fal.ai" : "Venice"} in Connections first.`,
+        `Connect ${provider === "fal" ? "fal.ai" : provider === "xai" ? "xAI" : "Venice"} in Connections first.`,
       );
     return transport(url, {
       method: body ? "POST" : "GET",
@@ -136,6 +143,7 @@ export function createImageService({
     const built = input.kind === "frame" ? frameImageContext(input, p) : imageAssetPrompt(input, p);
     if (built.references?.length) {
       if (input.mode !== 'vary') throw Error('Choose an image editing model to preserve this clip’s references.');
+      if (model.maxReferences && built.references.length > model.maxReferences) throw Error(`This model accepts up to ${model.maxReferences} reference images.`);
       if (model.provider === 'venice' && built.references.length > 1) throw Error('Choose fal.ai for multiple frame references. Venice edits accept one source image.');
       for (const ref of built.references) {
         const media = store.media(ref.mediaId);
@@ -148,7 +156,13 @@ export function createImageService({
     if (executionMode === "live") {
       if (!(await credentials(data, model.provider).key()))
         throw Error("Connect this provider in Connections first.");
-      if (model.provider === "fal") {
+      if (model.provider === 'xai') {
+        const catalog=await readJSON(path.join(data,'xai-connection.json'));
+        if(!catalog.imageModelIds?.includes(model.model))throw Error('Verify xAI in Connections to enable this image model.');
+        const count=input.mode === 'vary' ? built.references?.length || (input.sourceMediaId ? 1 : 0) : 0;
+        amount=Number((model.price+count*model.inputPrice).toFixed(4));
+        basis='Published xAI 1K price · 28 Oct 2026. Includes input images; quality is fixed for this estimate.';
+      } else if (model.provider === "fal") {
         const adapter = new FalAdapter({
           key: await credentials(data, "fal").key(),
           transport,
@@ -310,7 +324,7 @@ export function createImageService({
         const folder = path.join(p.folder, "media");
         await fs.mkdir(folder, { recursive: true });
         const output = path.join(folder, j.id + "-original.png");
-        const [w, h] = imageRatios[j.input.ratio];
+        const [w, h] = imageDimensions(j.input);
         await render([
           "-y",
           "-f",
@@ -351,7 +365,7 @@ export function createImageService({
       try {
         response = await call(
           j.provider,
-          j.provider === "fal"
+          j.provider === "xai" ? "https://api.x.ai/v1/images/" + (j.input.mode === "vary" ? "edits" : "generations") : j.provider === "fal"
             ? "https://queue.fal.run/" + j.model
             : "https://api.venice.ai/api/v1/image/" +
                 (j.input.mode === "vary" ? "edit" : "generate"),
@@ -411,7 +425,13 @@ export function createImageService({
         return;
       }
       let bytes;
-      if (j.input.mode === "vary") bytes = await boundedImage(response);
+      if (j.provider === 'xai') {
+        // Persist returned bytes locally; no credential is sent to an image CDN.
+        const result=JSON.parse((await boundedImage(response)).toString());
+        const encoded=result.data?.[0]?.b64_json;
+        if(typeof encoded !== 'string' || !encoded.length || encoded.length>34*1024*1024) throw Error('Grok returned no usable image. Check provider history before generating again.');
+        bytes=Buffer.from(encoded,'base64');
+      } else if (j.input.mode === "vary") bytes = await boundedImage(response);
       else {
         const result = await response.json();
         j.providerRequestId = result.id;

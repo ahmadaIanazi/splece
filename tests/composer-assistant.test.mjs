@@ -258,10 +258,12 @@ test("Live mocked usage is settled and separately reported; no repair loop after
   assert.equal(f.service.status("session").today.estimated, r.amount);
 });
 test("manual edits during a slow request discard the billed result", async (t) => {
-  let release;
+  let release, started;
+  const dispatched = new Promise(resolve => { started = resolve; });
   const gate = new Promise((r) => (release = r));
   const f = fixture(t, {
     transport: async () => {
+      started();
       await gate;
       return {
         ok: true,
@@ -280,7 +282,7 @@ test("manual edits during a slow request discard the billed result", async (t) =
   });
   f.setMode("live");
   const pending = f.service.decide(f.request());
-  await new Promise((r) => setTimeout(r, 5));
+  await dispatched;
   const saved = f.store.get(f.p.id),
     old = structuredClone(saved.project);
   saved.project.drafts[0].scenes[0].camera = "Wide shot";
@@ -297,17 +299,19 @@ test("manual edits during a slow request discard the billed result", async (t) =
   );
 });
 test("OFF cancels in flight, invalidates results and retains unknown usage reservation", async (t) => {
+  let started;
+  const dispatched = new Promise(resolve => { started = resolve; });
   const f = fixture(t, {
     transport: async (_url, { signal }) =>
-      new Promise((_, reject) =>
-        signal.addEventListener("abort", () => reject(Error("cancelled")), {
-          once: true,
-        }),
-      ),
+      new Promise((_, reject) => {
+        if (signal.aborted) return reject(Error("cancelled"));
+        signal.addEventListener("abort", () => reject(Error("cancelled")), { once: true });
+        started();
+      }),
   });
   f.setMode("live");
   const pending = f.service.decide(f.request());
-  await new Promise((r) => setTimeout(r, 5));
+  await dispatched;
   f.service.configure({ enabled: false });
   const r = await pending;
   assert.equal(r.state, "cancelled");
@@ -353,17 +357,19 @@ test("budget is reserved before dispatch, malformed/truncated/provider errors ar
   }
 });
 test("no paid dispatch after switching to Test while credentials are loading", async (t) => {
-  let release;
+  let release, started;
+  const loading = new Promise(resolve => { started = resolve; });
   const gate = new Promise((r) => (release = r));
   const f = fixture(t, {
     key: async () => {
+      started();
       await gate;
       return "key";
     },
   });
   f.setMode("live");
   const pending = f.service.decide(f.request());
-  await new Promise((r) => setTimeout(r, 5));
+  await loading;
   f.setMode("test");
   release();
   const r = await pending;
@@ -562,4 +568,13 @@ test('Inferred camera choices respect project/timed direction; explicit wording 
   s.text='A close-up of the radio.';
   raw.camera[0].evidence='close-up';
   assert.equal(validateAssistantDecision(raw,assistantContext(p,d,s.id,model)).camera.length,1);
+});
+
+test("Assistant feature off stops background decisions even if its prior preference was enabled",async t=>{
+ const fs=await import('node:fs/promises'),os=await import('node:os'),path=await import('node:path');
+ const data=await fs.mkdtemp(path.join(os.tmpdir(),'assistant-route-'));
+ t.after(()=>fs.rm(data,{recursive:true,force:true}));
+ await fs.writeFile(path.join(data,'ai-routing.json'),JSON.stringify({assistant:{enabled:false,provider:'deepseek',model:''}}));
+ const f=fixture(t,{data});f.setMode('live');
+ assert.deepEqual(await f.service.decide(f.request()),{state:'off'});
 });

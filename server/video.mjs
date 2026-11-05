@@ -1,4 +1,6 @@
+import { prepareSoundReference } from "./video-sound-reference.mjs";
 import { createProviderRegistry } from "./provider-registry.mjs";
+import { xaiVideoPayload, xaiVideoModels } from "./adapters/xai.mjs";
 import { falPayload, falEndpoints, falModel } from "./adapters/fal.mjs";
 import { providerId } from "../shared/providers.mjs";
 import { referenceRoles } from "../shared/reference-roles.mjs";
@@ -39,6 +41,7 @@ export function normalizeVideoCatalog(raw, fetchedAt = Date.now()) {
       !m.model_spec?.offline &&
       !special &&
       (["text-to-video", "image-to-video"].includes(type) ||
+        ["flat", "elements"].includes(mapping.referenceMode) ||
         mapping.requiresEnd) &&
       durations.length > 0;
     return {
@@ -142,7 +145,7 @@ export function createVideoService({
     async status() {
       const config = await read(configFile, { mode: "demo" }),
         catalog = await read(catalogFile, { models: [] });
-      const globalMode = await studioMode(data);
+      const globalMode = await studioMode(data, "video");
       if (globalMode) config.mode = globalMode === "test" ? "demo" : "venice";
       return {
         ...config,
@@ -162,6 +165,7 @@ export function createVideoService({
                   referenceCapabilities(m.id, m.type).requiresEnd)),
           })),
           ...((await registry.catalog("fal")).models || []),
+          ...((await registry.catalog("xai")).models || []),
         ],
       };
     },
@@ -171,7 +175,8 @@ export function createVideoService({
       if (
         mode === "venice" &&
         !(await credentials.key()) &&
-        !(await registry.credentials("fal").key())
+        !(await registry.credentials("fal").key()) &&
+        !(await registry.credentials("xai").key())
       )
         throw new Error("Save a video provider API key first");
       await write(configFile, { mode });
@@ -196,6 +201,7 @@ export function createVideoService({
           s.mode === "demo"
             ? [
                 ...demos,
+                ...xaiVideoModels.map(m => ({...m,name:m.name+" · Offline"})),
                 ...falEndpoints.map((e) => ({
                   ...falModel(e),
                   name: falModel(e).name + " · Offline",
@@ -384,6 +390,11 @@ export function createVideoService({
         const ref = snapshot.compiled.references.find((r) => r.selectedMedia);
         if (ref) payload.image_url = await loadMedia(ref.selectedMedia);
       }
+      if (snapshot.compiled.soundReference) {
+        const audio = await prepareSoundReference(store, project, snapshot.compiled.soundReference);
+        payload.reference_audio_urls = [audio.url];
+        snapshot.soundReferenceBinding = audio.binding;
+      }
       if (payload.prompt.length > m.promptLimit)
         throw new Error(
           "Prompt including reference roles exceeds this model limit; your draft is retained",
@@ -393,7 +404,7 @@ export function createVideoService({
           "Combined reference request exceeds 25 MB. Choose smaller reference images; originals remain saved.",
         );
       snapshot.requestPayload =
-        m.providerId === "fal" ? falPayload(payload, m) : payload;
+        m.providerId === "xai" ? xaiVideoPayload(payload, m) : m.providerId === "fal" ? falPayload(payload, m) : payload;
       snapshot.providerId = m.providerId || "venice";
       snapshot.connectionId = m.connectionId || snapshot.providerId;
       snapshot.capabilityVersion = m.capabilityVersion || m.catalogVersion;
@@ -408,6 +419,7 @@ export async function downloadVideo(url, fetcher = fetch, provider = "venice") {
     u.protocol !== "https:" ||
     !(provider === "fal"
       ? u.hostname === "fal.media" || u.hostname.endsWith(".fal.media")
+      : provider === "xai" ? ["vidgen.x.ai", "imgen.x.ai"].includes(u.hostname)
       : u.hostname === "private-share.venice.ai") ||
     u.username ||
     u.password ||

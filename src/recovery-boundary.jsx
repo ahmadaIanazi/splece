@@ -1,18 +1,43 @@
 import React from "react";
+import { isInterfaceLoadError } from "../shared/panel-recovery.mjs";
 export class RecoveryBoundary extends React.Component {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
+  state = { failed: false, error: null };
+  static getDerivedStateFromError(error) {
+    return { failed: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error("Panel failed to open", error, info.componentStack);
   }
   render() {
     if (!this.state.failed) return this.props.children;
     return (
       <div role="alert" className="panel-recovery">
-        <p>This panel could not open. Your project is still available.</p>
-        <button onClick={() => this.setState({ failed: false })}>
-          Try again
+        <p>
+          {isInterfaceLoadError(this.state.error)
+            ? "Part of the interface could not load. Reload the app to get the current version."
+            : "This panel could not open. Your project is still available."}
+        </p>
+        {isInterfaceLoadError(this.state.error) ? (
+          <button type="button" onClick={() => window.location.reload()}>
+            Reload app
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => this.setState({ failed: false, error: null })}
+          >
+            Try again
+          </button>
+        )}
+        <button type="button" onClick={this.props.onClose}>
+          Close panel
         </button>
-        <button onClick={this.props.onClose}>Close panel</button>
+        <details>
+          <summary>Error details</summary>
+          <pre>
+            {String(this.state.error?.message || "Unknown panel error")}
+          </pre>
+        </details>
       </div>
     );
   }

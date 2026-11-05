@@ -172,3 +172,10 @@ test("lip-sync prices reported per minute normalize to the quoted seconds", asyn
  const adapter=new FalSoundtrackAdapter({key:"FAKE",allowSubmit:async()=>false,transport:async()=>new Response(JSON.stringify({prices:[{endpoint_id:"fal-ai/sync-lipsync/v2",unit_price:3,unit:"minutes",currency:"USD"}]}),{status:200})});
  assert.equal((await adapter.pricing("fal-ai/sync-lipsync/v2")).rate*5,0.25);
 });
+
+test("dialogue-scene Foley keeps speech exclusions and does not loop like ambience",()=>{
+ const unit={model:AMBIENCE_MODEL,role:"effect",start:0,duration:5,sources:[{clipId:"c",start:0,duration:5}]};
+ const part=soundParts(unit)[0],caption=soundPrompt({contexts:[{clipId:"c",description:"A bird hops and flaps its wings."}]},unit,part);
+ const input=ambienceInput(caption.prompt,part,"effect");
+ assert.equal(input.loop,false);assert.match(input.text,/No speech/);assert.match(input.text,/landing taps/);assert.match(input.text,/wing flutter/);assert.ok(input.text.length<=450);
+});

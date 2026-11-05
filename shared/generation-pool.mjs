@@ -28,6 +28,40 @@ export function removeStorySlot(project, clipId, now = Date.now()) {
   return clip;
 }
 
+// Delete affects the visible generation; Cut still removes the whole slot.
+// Keep a per-slot exclusion so completed jobs cannot silently reattach it.
+export function removeActiveGeneration(project, clipId, jobs = []) {
+  const clip = project.clips.find((c) => c.id === clipId);
+  if (!clip) return null;
+  if (clip.takes.length <= 1) {
+    removeStorySlot(project, clipId);
+    return { removedClip: true };
+  }
+  const index = clip.takes.findIndex((t) => t.id === clip.activeTake);
+  if (index < 0) throw Error("Select a generation before deleting it.");
+  const removed = clip.takes[index];
+  const candidates = [
+    ...clip.takes.slice(0, index).reverse(),
+    ...clip.takes.slice(index + 1),
+  ];
+  const next = candidates.find((take) => !clip.repair ||
+    take.duration - (take.sourceIn || 0) >= clip.duration - 0.04);
+  if (!next) throw Error("The remaining generations are too short for this repair. Choose another generation first.");
+  activateSlotTake(project, clip, next, jobs);
+  clip.takes = clip.takes.filter((t) => t.id !== removed.id);
+  clip.removedTakeIds = [...new Set([...(clip.removedTakeIds || []), removed.id])];
+  return { removedClip: false, takeId: removed.id, activeTake: next.id };
+}
+
+export function removeGeneration(project, clipId, takeId, jobs=[]) {
+ const clip=project.clips.find(c=>c.id===clipId);
+ if(!clip || !clip.takes.some(t=>t.id===takeId)) return null;
+ if(clip.activeTake===takeId) return removeActiveGeneration(project,clipId,jobs);
+ clip.takes=clip.takes.filter(t=>t.id!==takeId);
+ clip.removedTakeIds=[...new Set([...(clip.removedTakeIds||[]),takeId])];
+ return {removedClip:false,takeId,activeTake:clip.activeTake};
+}
+
 export function generationPool(project, jobs) {
   const removed = (project.removedClips || []).filter(
     (r) =>
@@ -113,6 +147,7 @@ export function restorePoolEntry(
       (c) => c.id === target || c.generationTargets?.includes(target),
     );
     if (clip) {
+      clip.removedTakeIds = (clip.removedTakeIds || []).filter(id => id !== entry.media.id);
       if (!clip.takes.some((t) => t.id === entry.media.id))
         clip.takes.push(structuredClone(entry.media));
       activateSlotTake(project, clip, entry.media, jobs);

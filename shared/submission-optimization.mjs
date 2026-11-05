@@ -1,3 +1,4 @@
+import { preserveVideoSoundSection } from "./video-sound.mjs";
 import { smartSignature } from "./smart.mjs";
 import { normalizeWritingVariation } from "./writing-variation.mjs";
 
@@ -47,5 +48,6 @@ export function optimizedSubmissionDraft(
     usage: job.billing?.usage,
     estimate: job.billing?.estimate,
   };
+  preserveVideoSoundSection(copy, job.input.compiled);
   return copy;
 }

@@ -1,0 +1,460 @@
+.modal.asset-library-modal:has(.character-sheet) {
+  width: min(1280px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal.asset-library-modal:has(.character-sheet) > header {
+  flex: 0 0 auto;
+  padding-bottom: 12px;
+}
+.modal.asset-library-modal:has(.character-sheet) > header h2 {
+  font-size: 18px;
+}
+.modal.asset-library-modal:has(.character-sheet) .asset-edit-navigation {
+  flex: 0 0 auto;
+  padding: 0 0 16px;
+  font-size: 12px;
+}
+.modal.asset-library-modal:has(.character-sheet) .asset-editor {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  gap: 0;
+}
+.modal.asset-library-modal:has(.character-sheet)
+  .asset-editor
+  > .detail-actions {
+  flex: 0 0 auto;
+  margin-top: 16px;
+  padding: 12px 0 0;
+  background: transparent;
+  border-top: 1px solid var(--border-default);
+}
+.character-sheet {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 28px;
+  overflow: auto;
+  min-height: 0;
+  padding: 4px 4px 8px;
+}
+.character-sheet small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.character-sheet button {
+  box-shadow: none;
+  min-height: 36px;
+}
+.character-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.character-identity-card {
+  background: var(--surface-raised);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.character-identity-card > label,
+.character-identity-card > details,
+.character-identity-pair {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-default);
+}
+.character-identity-card label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.character-identity-card input,
+.character-identity-card select {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--text-primary);
+  border-radius: 0;
+  font-size: 14px;
+}
+.character-identity-card input[aria-label="Character name"] {
+  font-size: 20px;
+  font-weight: 700;
+}
+.character-identity-card textarea {
+  width: 100%;
+  margin-top: 12px;
+}
+.character-identity-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.character-identity-card details:last-child {
+  border: 0;
+}
+.character-sheet summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.character-voice-tile {
+  display: flex;
+  align-items: center;
+  text-align: start;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface-raised);
+}
+.character-voice-tile span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.character-voice-tile small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.character-voice-tile[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.character-organization {
+  padding: 0 8px;
+}
+.character-organization[open] {
+  display: grid;
+  gap: 16px;
+}
+.character-looks-workspace {
+  min-width: 0;
+}
+.character-looks-workspace > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  min-height: 20px;
+}
+.character-looks-workspace > header button {
+  background: transparent;
+  font-size: 12px;
+}
+.character-looks-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 4px 16px;
+  margin: -4px -4px 8px;
+}
+.character-looks-strip > button {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 76px;
+  min-width: 0;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.character-looks-strip > button > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  width: 76px;
+  background: var(--surface-raised);
+  border-radius: 14px;
+}
+.character-looks-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.character-looks-strip small {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.character-looks-strip > button[aria-pressed="true"] > span {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.character-looks-strip svg.lucide-star {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background: var(--surface-recessed);
+  border-radius: 4px;
+}
+.character-looks-strip .character-add-look > span {
+  background: transparent;
+  border: 1px dashed var(--border-default);
+}
+.character-look-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.85fr) minmax(220px, 1.4fr);
+  gap: 24px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--surface-raised);
+}
+.character-look-image {
+  position: relative;
+  min-height: 320px;
+  background: var(--surface-recessed);
+  border-radius: 16px;
+  overflow: hidden;
+  align-self: start;
+}
+.character-look-image > img {
+  display: block;
+  width: 100%;
+  height: clamp(320px, 42dvh, 500px);
+  object-fit: contain;
+}
+.character-look-image > div {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+.character-look-image button {
+  background: var(--surface-recessed);
+  font-size: 11px;
+}
+.character-look-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.character-look-fields > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.character-look-fields > header input {
+  width: 150px;
+  min-width: 0;
+  background: transparent;
+  padding: 4px 0;
+  border: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.character-look-fields > header small {
+  background: var(--surface-recessed);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.character-look-fields > label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.character-look-fields textarea {
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface-recessed);
+}
+.character-sheet .character-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.character-scope input {
+  width: auto;
+}
+.character-add-surface {
+  min-height: 380px;
+  padding: 32px;
+  border: 1px dashed var(--border-default);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.character-add-surface h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.character-add-surface p {
+  margin: 0 0 12px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.character-add-surface button {
+  width: min(100%, 300px);
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 999px;
+}
+.character-add-methods {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.character-looks-workspace .character-gender {
+  display: none;
+}
+.character-sheet :is(input, textarea, select, button):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 1000px) {
+  .character-sheet {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 20px;
+  }
+  .character-look-card {
+    grid-template-columns: 1fr;
+  }
+  .character-look-image > img {
+    height: 240px;
+  }
+  .character-look-image {
+    min-height: 240px;
+  }
+}
+@media (max-width: 650px) {
+  .modal.asset-library-modal:has(.character-sheet) {
+    width: calc(100vw - 16px);
+    padding: 16px;
+  }
+  .character-sheet {
+    grid-template-columns: 1fr;
+  }
+  .character-look-card {
+    padding: 16px;
+  }
+  .character-add-surface {
+    padding: 20px;
+  }
+}
+
+.modal.asset-library-modal .character-sheet {
+  width: 100%;
+  flex: 1 1 auto;
+}
+.modal.asset-library-modal:has(.character-sheet)
+  .asset-editor
+  > .detail-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+.modal.asset-library-modal:has(.character-sheet) {
+  box-shadow: none;
+}
+.modal.asset-library-modal:has(.character-sheet) > header {
+  position: static;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.modal.asset-library-modal:has(.character-sheet) > header h2 {
+  flex: 1;
+  font-weight: 700;
+}
+.modal.asset-library-modal:has(.character-sheet) > header small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.modal.asset-library-modal:has(.character-sheet) .character-header-back {
+  background: transparent;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.modal.asset-library-modal:has(.character-sheet)
+  .asset-editor
+  > .detail-actions {
+  position: static;
+}
+@media (max-height: 760px) and (min-width: 1001px) {
+  .character-identity-card > label,
+  .character-identity-card > details,
+  .character-identity-pair {
+    padding: 12px 16px;
+  }
+  .character-look-image,
+  .character-look-image > img {
+    min-height: 260px;
+    height: 260px;
+  }
+  .character-looks-strip > button > span {
+    height: 64px;
+  }
+  .character-looks-strip {
+    margin-bottom: 0;
+  }
+  .character-look-card {
+    gap: 20px;
+    padding: 18px;
+  }
+  .character-look-fields {
+    gap: 10px;
+  }
+  .character-look-fields textarea[aria-label="Current look description"] {
+    min-height: 90px;
+    height: 90px;
+  }
+  .character-look-fields textarea[aria-label="Look movement and setting"] {
+    min-height: 65px;
+    height: 65px;
+  }
+}
+@media (min-width: 651px) {
+  .character-sheet:has(.asset-imagine) {
+    height: calc(100dvh - 180px);
+    overflow: hidden;
+  }
+  .character-sheet:has(.asset-imagine) .character-identity {
+    overflow: auto;
+    padding-right: 4px;
+  }
+  .character-sheet:has(.asset-imagine) .character-looks-workspace {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .character-sheet:has(.asset-imagine) .character-looks-workspace > header {
+    flex: none;
+  }
+  .character-sheet .asset-imagine {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .character-sheet:has(.asset-imagine) .imagine-workspace {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+}

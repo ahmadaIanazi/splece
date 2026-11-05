@@ -5,6 +5,7 @@ import {
 import { useLipSync } from "./lip-sync";
 import { DialogueFlow } from "./dialogue-flow";
 import { SoundMix } from "./sound-mix";
+import { LocalTools } from "./local-tools";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AudioLines,
@@ -56,7 +57,7 @@ const soundMoney = (value) =>
         style: "currency",
         currency: "USD",
         minimumFractionDigits: 3,
-        maximumFractionDigits: 5,
+        maximumFractionDigits: 3,
       }).format(value)
     : money(value);
 
@@ -161,6 +162,7 @@ export function useSoundtrack(project, update, flush) {
     }
   }
   return {
+    flush: () => latest.current.flush(),
     async estimate(options) {
       const initial = latest.current.project;
       await latest.current.flush();
@@ -217,6 +219,7 @@ export function SoundtrackPanel({
   const connection = useProviderConnection("fal", testMode ? "test" : "live");
   providerReady = providerReady && !connection.needsConnection;
   const [scope, setScope] = useState("all");
+  const [localToolsOpen, setLocalToolsOpen] = useState(false);
   const [roles, setRoles] = useState(["effect"]);
   const [directions, setDirections] = useState({});
   const direction = directions[roles[0]] || "";
@@ -281,7 +284,7 @@ export function SoundtrackPanel({
     setQuote(null);
     setQuoteError("");
     if (
-      !clips.length ||
+      localToolsOpen || !clips.length ||
       (!testMode && !providerReady) ||
       (roles[0] === "dialogue" && speechChoice !== "voiceover")
     )
@@ -298,7 +301,7 @@ export function SoundtrackPanel({
       disposed = true;
       clearTimeout(timer);
     };
-  }, [requestKey, speechChoice, providerReady]);
+  }, [requestKey, speechChoice, providerReady, localToolsOpen]);
   const active = activeSoundtrackRun(sound.runs, project.episodeId, roles);
   const canSubmit =
     quote &&
@@ -338,7 +341,7 @@ export function SoundtrackPanel({
     sound.runs.find((r) => r.id === sound.focus?.runId) ||
     sound.runs.find((r) => r.units.some((u) => u.role === roles[0]));
   const title = {
-    effect: "Effects",
+    effect: "Sound effects",
     ambience: "Ambience",
     dialogue: "Dialogue",
   }[roles[0]];
@@ -409,7 +412,7 @@ export function SoundtrackPanel({
         <strong>Sound</strong>
         <button
           className="icon"
-          aria-label="Back to All timeline"
+          aria-label="Close sound"
           title="Close sound"
           onClick={onClose}
         >
@@ -417,9 +420,11 @@ export function SoundtrackPanel({
         </button>
       </div>
       <div className="soundtrack-panel-content">
+        <LocalTools project={project} update={update} flush={sound.flush} selectedIds={selectedIds} onSeek={onSeek} onToggle={setLocalToolsOpen}/>
+        <div className="soundtrack-generation-tools" hidden={localToolsOpen}>
         <div className="soundtrack-roles" role="group" aria-label="Sound layer">
           {[
-            ["effect", "Effects", Clapperboard],
+            ["effect", "Sound effects", Clapperboard],
             ["ambience", "Ambience", Wind],
             ["dialogue", "Dialogue", Mic2],
           ].map(([id, label, Icon]) => (
@@ -813,6 +818,7 @@ export function SoundtrackPanel({
                 ? "Your written lines and voice direction go to ElevenLabs via fal. Video is not sent for voice-over."
                 : roles[0] === "ambience"
                   ? "A short environment description goes to ElevenLabs via fal. Video is not uploaded."
+                  : quote?.estimate?.layers?.some(l=>l.role==="effect"&&l.model==="fal-ai/elevenlabs/sound-effects/v2") ? "Effects follow the scene descriptions through ElevenLabs via fal. Video is not uploaded on this path, reducing invented speech in talking scenes. Check contact timing in playback."
                   : "A silent preview copy and sound cues go to MMAudio via fal. Listen for unwanted voice-like sounds before keeping the mix."}
           </p>
           {!testMode && quote && (
@@ -826,8 +832,9 @@ export function SoundtrackPanel({
             independently editable.
           </p>
         </details>
+        </div>
       </div>
-      <footer className="soundtrack-action-bar" hidden={!canGenerate}>
+      <footer className="soundtrack-action-bar" hidden={!canGenerate || localToolsOpen}>
         <div className="soundtrack-action-meta">
           <span>
             {scopeText}
@@ -838,9 +845,7 @@ export function SoundtrackPanel({
           <span>
             {testMode
               ? "Offline · no credits"
-              : quote
-                ? `${soundMoney(quote.estimate.amount)} estimate`
-                : ""}
+              : ""}
           </span>
         </div>
         {active ? (

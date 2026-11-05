@@ -1,3 +1,4 @@
+import { preserveVideoSoundSection } from "./video-sound.mjs";
 import { actionLines } from "./shot-direction.mjs";
 import {
   assertProtectedPrompt,
@@ -122,6 +123,7 @@ export function addWritingVariation(project, job, { activate = true } = {}) {
   delete draft.sourceGenerationId;
   for (const scene of draft.scenes)
     scene.text = job.result.scenes.find((s) => s.id === scene.id).text;
+  if (job.input.operation === "optimize-writing") preserveVideoSoundSection(draft, job.input.compiled);
   project.drafts.push(draft);
   if (activate) project.activeDraftId = draft.id;
   return draft;

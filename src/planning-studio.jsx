@@ -1,4 +1,7 @@
+import { editedStoryTiming } from "../shared/timeline-navigation.mjs";
+import { planningTimeline, planningBoard } from "../shared/planning-timeline.mjs";
 import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ConnectProviderButton, ProviderAction } from "./provider-connect";
 import {
   ArrowUp,
@@ -26,7 +29,7 @@ import {
   beatDraft,
   attachProjectReference,
 } from "../shared/authoring.mjs";
-import { createStructureNode, isStructureClip } from "../shared/structure.mjs";
+import { createStructureNode, isStructureClip, structureColor } from "../shared/structure.mjs";
 import {
   planningColumns,
   planningMessages,
@@ -87,9 +90,26 @@ export function PlanningStudio({
   onJobs,
   defaultSettings,
   jobs = [],
+  embedded = false,
+  active = true,
+  setupHost,
+  timelineHost,
+  onClose,
+  onGroup,
+  onPreview,
+  onOpenMedia,
+  onBlank,
+  onImportFiles,
+  onImportImages,
+  timelineZoom,
+  onTimelineZoom,
+  timelineRef,
+  time = 0,
+  onSeek,
 }) {
   const plan = storyPlan(project),
     columns = planningColumns(plan),
+    baseLayout = planningTimeline(plan, editedStoryTiming(project,jobs)),
     references = planningReferenceIds(plan);
   const messages = planningMessages(project),
     session = project.planningSessions?.[project.episodeId];
@@ -107,6 +127,14 @@ export function PlanningStudio({
     input = useRef(null),
     lock = useRef(false),
     pan = useRef(null);
+  const pixelsPerSecond = timelineZoom ?? 20 * zoom;
+  const layout = planningBoard(baseLayout, project.clips, pixelsPerSecond);
+  useEffect(()=>{
+    if(active && embedded && board.current && layout.end) {
+
+      board.current.scrollLeft=0;
+    }
+  },[active, project.id, project.episodeId, timelineHost, !!layout.end]);
   const busy = sending || workflow.busy,
     focus = plan.beats.find((b) => b.id === selected);
   const assets = project.assets.filter((a) => references.has(a.id));
@@ -124,7 +152,8 @@ export function PlanningStudio({
   }, [project.id, project.episodeId]);
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
-  }, [messages.length, busy]);
+  }, [messages.length, busy, active]);
+  useEffect(() => { if (!active) setPreviewId(null); }, [active]);
   async function run(fn) {
     setError("");
     try {
@@ -183,6 +212,7 @@ export function PlanningStudio({
     }
   }
   function openClip(node) {
+    if (node.importedClipId) return onOpenMedia?.(project.clips.find(c=>c.id===node.importedClipId));
     let draft = project.drafts.find(
       (d) =>
         d.storyBeatId === node.id &&
@@ -201,6 +231,19 @@ export function PlanningStudio({
     }
     setSelected(node.id);
     (onCompose || onOpen)(draft);
+  }
+  function organizeImports() {
+    update(p=>{
+      const next=structuredClone(storyPlan(p));
+      const importedIds=new Set(layout.cards.filter(c=>c.importedClipId).map(c=>c.importedClipId));
+      const imported=p.clips.filter(c=>importedIds.has(c.id));
+      if(!imported.length)return;
+      const group=createStructureNode(next,"group");
+      Object.assign(group,{kind:"scene",childNodeType:"clip",title:"Imported clips",start:Math.min(...imported.map(c=>c.start)),duration:Math.max(...imported.map(c=>c.start+c.duration))-Math.min(...imported.map(c=>c.start))});
+      next.beats.push(group);
+      imported.forEach(c=>{const node=createStructureNode(next,"clip",group.id);Object.assign(node,{title:c.name||c.takes.find(t=>t.id===c.activeTake)?.name||"Imported clip",start:c.start,duration:c.duration,description:c.description||"Imported media"});next.beats.push(node);c.storyBeatId=node.id;c.structureNodeId=node.id;});
+      p.storyPlans??={};p.storyPlans[p.episodeId]=next;
+    });
   }
   function addScene() {
     update((p) => {
@@ -272,11 +315,15 @@ export function PlanningStudio({
         ))}
     </div>
   );
+  function selectCard(node) {
+    setSelected(node.id);
+    onSeek?.(node.start);
+  }
   function card(node, root = false) {
     const clip = isStructureClip(node),
       Icon = iconFor(node);
     const mediaClip = project.clips.find(
-      (c) => (c.storyBeatId || c.structureNodeId) === node.id,
+      (c) => c.id === node.importedClipId || (c.storyBeatId || c.structureNodeId) === node.id,
     );
     const take = mediaClip?.takes?.find((t) => t.id === mediaClip.activeTake);
     const attempts = jobsForStory(jobs, node.id, project.episodeId);
@@ -296,19 +343,19 @@ export function PlanningStudio({
       <article
         key={node.id}
         className={`planning-card ${root ? "planning-scene-card" : ""} ${clip ? "clip-card" : ""} ${selected === node.id ? "is-selected" : ""}`}
-        style={{ "--depth": Math.min(node.boardDepth || 0, 5) }}
-        onClick={() => setSelected(node.id)}
+        style={{ "--depth": Math.min(node.boardDepth || 0, 5), "--plan-group-color": structureColor(plan, node) }}
+        onClick={() => selectCard(node)}
       >
         <button
           className="planning-card-title"
-          onClick={() => setSelected(node.id)}
+          onClick={event => { event.stopPropagation(); selectCard(node); }}
           aria-pressed={selected === node.id}
         >
           <Icon size={17} />
           <span>{node.title}</span>
           <small>{Math.round(node.duration * 10) / 10}s</small>
         </button>
-        <p dir="auto">
+        <p dir="auto" title={node.description}>
           {node.description ||
             "Describe this part in the chat. We’ll build from here."}
         </p>
@@ -321,14 +368,14 @@ export function PlanningStudio({
           [...(node.characterIds || []), node.locationId].filter(Boolean),
         )}
         {media?.url && (
-          <div onClick={(e) => e.stopPropagation()}>
+          <div className="planning-card-media" onClick={(e) => e.stopPropagation()}>
             {previewId === node.id ? (
               <PlanningPlayback media={media} projectId={project.id} />
             ) : (
               <button
                 className="planning-poster"
                 aria-label={`Play ${node.title}`}
-                onClick={() => setPreviewId(node.id)}
+                onClick={() => onPreview && mediaClip ? onPreview(mediaClip) : setPreviewId(node.id)}
               >
                 <img loading="lazy" src={media.thumbnail} alt="" />
                 <Play size={24} />
@@ -350,7 +397,7 @@ export function PlanningStudio({
               onJobs?.();
             }}
           >
-            This take needs attention · Review
+            This version needs attention · Review
           </button>
         )}
         <footer>
@@ -367,7 +414,7 @@ export function PlanningStudio({
               }}
             >
               <Film size={14} />
-              {job ? "Generating…" : media ? "Review take" : "Create clip"}
+              {job ? "Generating…" : media ? "Open clip" : "Create clip"}
             </button>
           ) : children.length ? (
             <span>
@@ -393,13 +440,17 @@ export function PlanningStudio({
       </article>
     );
   }
+  const surface = (content, host, kind) => embedded
+    ? host && createPortal(<div className={`planning-studio planning-embedded planning-${kind}`}>{content}</div>, host)
+    : content;
   return (
-    <main className={`planning-studio ${collapsed ? "setup-collapsed" : ""}`}>
+    <div className={embedded ? "planning-controller" : `planning-studio ${collapsed ? "setup-collapsed" : ""}`}>
+      {surface(
       <aside className="planning-setup" aria-label="Setup and planning chat">
         <header>
           <div>
             <span className="planning-eyebrow">YOUR STORY</span>
-            <h2>Setup</h2>
+            <h2>{embedded ? "Plan" : "Setup"}</h2>
           </div>
           <div>
             <button
@@ -417,9 +468,9 @@ export function PlanningStudio({
               <History size={18} />
             </button>
             <button
-              title="Collapse setup"
-              aria-label="Collapse setup"
-              onClick={() => setCollapsed(true)}
+              title={embedded ? "Close plan" : "Collapse setup"}
+              aria-label={embedded ? "Close plan" : "Collapse setup"}
+              onClick={() => embedded ? onClose?.() : setCollapsed(true)}
             >
               <ChevronLeft size={18} />
             </button>
@@ -493,19 +544,20 @@ export function PlanningStudio({
               ))}
             </section>
           )}
-          {!messages.length && (
+          {!messages.length && (plan.beats.length>0 || project.clips.length>0) && (
             <div className="planning-welcome">
               <Sparkles size={23} />
               <h3>
                 {plan.beats.length
                   ? "Keep shaping your story."
-                  : "Start with a small idea."}
+                  : "Build on your clips."}
               </h3>
               <p>
                 {plan.beats.length
-                  ? "Your scenes and Editor work are here. Tell me what you want to change."
-                  : "Tell me what you imagine. We’ll find the characters, shape the scenes, then make one clip at a time."}
+                  ? "Your latest scenes and edits are here. Tell me what you want to change."
+                  : "Your imported clips are on the board. Tell me how you want to organize or develop them."}
               </p>
+              {embedded && !plan.beats.length && onBlank && <button className="planning-skip" onClick={onBlank}>Start creating <ChevronRight size={14}/></button>}
             </div>
           )}
           <div
@@ -631,8 +683,8 @@ export function PlanningStudio({
             </button>}
           </div>
         </form>
-      </aside>
-      <section
+      </aside>, setupHost, "setup-surface")}
+      {surface(<section
         className="planning-board-area"
         aria-label="Scene planning board"
       >
@@ -657,7 +709,9 @@ export function PlanningStudio({
             </h2>
           </div>
           <div>
-            {!composer && (
+            {!composer && embedded && layout.cards.some(c=>c.importedClipId) && <button onClick={organizeImports}>Organize imported clips</button>}
+            {!composer && embedded && <button aria-label="Add a scene" onClick={addScene}><Plus size={16}/>Scene</button>}
+            {!composer && !embedded && (
               <>
                 <button
                   aria-label="Zoom out"
@@ -686,7 +740,7 @@ export function PlanningStudio({
         ) : (
           <div
             className="planning-board"
-            ref={board}
+            ref={element=>{board.current=element;if(timelineRef)timelineRef.current=element;}}
             style={{ "--card-width": `${330 * zoom}px` }}
             onPointerDown={(e) => {
               if (
@@ -705,55 +759,42 @@ export function PlanningStudio({
             onPointerUp={() => (pan.current = null)}
             onPointerCancel={() => (pan.current = null)}
           >
-            {!columns.length ? (
-              <div className="planning-empty">
-                <div className="planning-ghosts">
-                  <span />
-                  <span />
-                  <span />
+            {!layout.cards.length ? (
+              <div className="planning-empty planning-start" onDragOver={event => { if (event.dataTransfer.types.includes("Files")) {event.preventDefault(); event.stopPropagation();} }} onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); event.stopPropagation(); onImportFiles?.(event.dataTransfer.files); }}>
+                <h3>Make something your way.</h3>
+                <p>Plan with a conversation, or start with the images you already have.</p>
+                <div className="planning-start-actions">
+                  <button onClick={() => input.current?.focus()}><ArrowLeft size={16}/> Describe an idea</button>
+                  <button className="primary" onClick={onBlank}>Start empty <ChevronRight size={16}/></button>
                 </div>
-                <h3>Your scenes will take shape here.</h3>
-                <p>
-                  Start the conversation on the left.
-                  <br />
-                  Your first scene will arrive with clips ready to shape.
-                </p>
-                <button onClick={() => input.current?.focus()}>
-                  <ArrowLeft size={16} />
-                  Write your idea
+                <button className="planning-image-drop" onClick={onImportImages}>
+                  <span>Add media · drop images here or choose photos</span>
+                  <small>Added to your timeline and Images library. Describe and tag with AI when connected.</small>
                 </button>
               </div>
             ) : (
-              <div className="planning-columns">
-                {columns.map((column, i) => (
-                  <section
-                    className="planning-column"
-                    key={column.root.id}
-                    aria-label={column.root.title}
-                  >
-                    <div className="planning-ruler">
-                      <span>{tc(column.root.start)}</span>
-                      <small>{i + 1}</small>
-                      <span>
-                        {tc(column.root.start + column.root.duration)}
-                      </span>
-                    </div>
-                    {column.nodes.map((node, j) => card(node, j === 0))}
-                  </section>
-                ))}
-                <button
-                  className="planning-add-scene"
-                  onClick={addScene}
-                  aria-label="Add a scene"
-                >
-                  <Plus size={24} />
-                </button>
+              <div className="planning-time-track" style={{width:layout.width, '--group-rows':layout.depth}}>
+                <div className="planning-group-titles">
+                  {layout.groups.map(node=><button key={node.id} className="planning-group-title" style={{left:layout.atTime(node.start),width:Math.max(260,layout.atTime(node.end)-layout.atTime(node.start)),top:node.boardDepth*24,color:structureColor(plan,node)}} title={node.title} onClick={()=>{setSelected(node.id);onGroup?.(node);}}>
+                    <ChevronRight size={12}/><span>{node.title}</span>
+                  </button>)}
+                </div>
+                <div className="planning-card-lane">
+                  {layout.cards.map(node=><div key={node.id} className="planning-timed-card" style={{left:node.left,width:node.width}}>{card(node,!isStructureClip(node))}</div>)}
+                </div>
+                <div className="planning-time-ruler" role="slider" tabIndex={0} aria-label="Plan playhead" aria-valuemin={0} aria-valuemax={layout.end} aria-valuenow={Math.min(time,layout.end)}
+                  onPointerDown={e=>{e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);onSeek?.(Math.max(0,Math.min(layout.end,layout.atPixel(e.clientX-e.currentTarget.getBoundingClientRect().left))));}}
+                  onPointerMove={e=>{if(e.buttons===1)onSeek?.(Math.max(0,Math.min(layout.end,layout.atPixel(e.clientX-e.currentTarget.getBoundingClientRect().left))));}}
+                  onKeyDown={e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();onSeek?.(e.key==='Home'?0:e.key==='End'?layout.end:Math.max(0,Math.min(layout.end,time+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?1:1/(project.settings.export.fps||24)))));}}}>
+                  {layout.cards.map(c=><span key={c.id} style={{left:c.left}}>{tc(c.start)}</span>)}
+                </div>
+                <div className="planning-time-playhead" aria-hidden="true" style={{left:layout.atTime(time)}}/>
               </div>
             )}
           </div>
         )}
-      </section>
-      {panel === "history" && (
+      </section>, timelineHost, "timeline-surface")}
+      {active && panel === "history" && (
         <Modal title="Activity & versions" wide onClose={() => setPanel(null)}>
           <StructureWorkflowHistory
             workflow={workflow}
@@ -763,7 +804,7 @@ export function PlanningStudio({
           />
         </Modal>
       )}
-      {panel === "library" && (
+      {active && panel === "library" && (
         <Modal
           title="Choose story references"
           wide
@@ -792,7 +833,7 @@ export function PlanningStudio({
           />
         </Modal>
       )}
-      {imageAsset && (
+      {active && imageAsset && (
         <Modal title={imageAsset.name} wide onClose={() => setPanel(null)}>
           <Suspense fallback={<p role="status">Opening image studio…</p>}>
             <AssetGenerator
@@ -826,6 +867,6 @@ export function PlanningStudio({
           </button>
         </Modal>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { CharacterWorkbench } from "./character-workbench";
 import React, { useEffect, useRef, useState, lazy, Suspense } from "react";
 import {
   Upload,
@@ -41,11 +42,19 @@ const AssetUnderstanding = lazy(() =>
   })),
 );
 
-export function AssetWorkbench({
+export function AssetWorkbench(props) {
+  return props.asset.kind === "character" ? (
+    <CharacterWorkbench {...props} />
+  ) : (
+    <VisualAssetWorkbench {...props} />
+  );
+}
+function VisualAssetWorkbench({
   asset,
   project,
   change,
   onImport,
+  onAdopt,
   onStarted,
   organization,
   initialFolderId,
@@ -55,7 +64,8 @@ export function AssetWorkbench({
     [selectedId, setSelectedId] = useState(asset.media?.id || ""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [suggestion, setSuggestion] = useState(null);
+    [suggestion, setSuggestion] = useState(null),
+    [pendingReference, setPendingReference] = useState(null);
   const alive = useRef(true),
     sourceLock = useRef(false);
   useEffect(() => {
@@ -112,7 +122,8 @@ export function AssetWorkbench({
       const media = await response.json();
       if (!response.ok) throw Error(media.error || "Import failed.");
       if (media.kind !== "image") throw Error("Choose an image.");
-      attach(media);
+      setPendingReference(media);
+      setSource("generate");
     } catch (e) {
       if (alive.current) setError(e.message);
     } finally {
@@ -167,6 +178,7 @@ export function AssetWorkbench({
         next.media?.id ||
         "",
     );
+    setPendingReference(null);
     setSource("looks");
   };
   const matching = project.assets.filter(
@@ -185,7 +197,7 @@ export function AssetWorkbench({
               onClick={() => setSource("looks")}
             >
               <Images size={15} />
-              Looks <small>{gallery.length}</small>
+              Versions <small>{gallery.length}</small>
             </button>
           )}
           <button
@@ -195,14 +207,6 @@ export function AssetWorkbench({
           >
             <Sparkles size={15} />
             Add image
-          </button>
-          <button
-            type="button"
-            aria-pressed={source === "library"}
-            onClick={() => setSource("library")}
-          >
-            <Images size={15} />
-            Library
           </button>
         </nav>
         {source === "generate" ? (
@@ -215,7 +219,7 @@ export function AssetWorkbench({
             }
           >
             <AssetGenerator
-              key={`${asset.id}:${suggestion?.id || "default"}`}
+              key={`${asset.id}:${pendingReference?.id || suggestion?.id || "default"}`}
               embedded
               asset={asset}
               project={project}
@@ -228,8 +232,9 @@ export function AssetWorkbench({
                 if (added) setSelectedId(added.id);
               }}
               onStarted={onStarted}
+              onAdopt={onAdopt}
+              initialReference={pendingReference}
               initialDirection={suggestion?.prompt}
-              initialPresetId={suggestion?.presetId}
               initialSourceMediaId={selected?.id}
             />
           </Suspense>
@@ -302,8 +307,8 @@ export function AssetWorkbench({
                   </span>
                   <button
                     type="button"
-                    aria-label="Remove this look"
-                    title="Remove this look from the asset draft"
+                    aria-label="Remove this version"
+                    title="Remove this version from the asset draft"
                     onClick={removeLook}
                   >
                     <Trash2 size={15} />
@@ -311,7 +316,7 @@ export function AssetWorkbench({
                 </div>
               )}
             </div>
-            <div className="asset-look-carousel" aria-label="Asset looks">
+            <div className="asset-look-carousel" aria-label="Asset versions">
               {gallery.map((media) => (
                 <button
                   type="button"
@@ -330,7 +335,7 @@ export function AssetWorkbench({
               <button
                 type="button"
                 className="asset-look-add"
-                aria-label="Generate another look"
+                aria-label="Add a version"
                 onClick={() => {
                   setSuggestion(null);
                   setSource("generate");
@@ -415,7 +420,7 @@ export function AssetWorkbench({
           aria-label="Asset profile sections"
         >
           {[
-            ["look", "This look", SlidersHorizontal],
+            ["look", "This version", SlidersHorizontal],
             [
               "details",
               asset.kind === "character" ? "Character" : "Details",
@@ -441,9 +446,9 @@ export function AssetWorkbench({
           <div className="asset-profile-fields">
             {variant && (
               <label>
-                Look name
+                Version name
                 <input
-                  aria-label="Look name"
+                  aria-label="Version name"
                   value={variant.name || ""}
                   onChange={(event) => setLook("name", event.target.value)}
                 />
@@ -460,7 +465,7 @@ export function AssetWorkbench({
                     ? "Light, atmosphere & details"
                     : "Visual details"}
               <textarea
-                aria-label="Current look description"
+                aria-label="Current version description"
                 placeholder={
                   asset.kind === "character"
                     ? "Outfit, expression, pose…"
@@ -520,7 +525,7 @@ export function AssetWorkbench({
               <details className="asset-workbench-more">
                 <summary>
                   <ChevronDown size={13} />
-                  Look details
+                  Version details
                 </summary>
                 <div className="asset-look-tags">
                   {assetTagFields(asset.kind).map((key) => (
@@ -570,7 +575,7 @@ export function AssetWorkbench({
               onClick={() => setSource("generate")}
             >
               <WandSparkles size={16} />
-              Explore another look
+              Add a version
             </button>
           </div>
         ) : tab === "voice" && asset.kind === "character" ? (
@@ -612,6 +617,11 @@ export function AssetWorkbench({
               </label>
             )}
           </div>
+        )}
+        {asset.imageAnalysis && (
+          <p className="muted" role="status">
+            {asset.imageAnalysis}
+          </p>
         )}
         <Suspense fallback={null}>
           <AssetUnderstanding
@@ -655,4 +665,26 @@ export function AssetWorkbench({
       </section>
     </div>
   );
+}
+
+export function MediaAssetWorkbench({asset,project,change,onImport,organization,initialFolderId}) {
+ const audio=asset.kind==='audio';
+ return <div className="media-asset-workbench">
+   <section className="media-asset-preview">
+     {asset.media ? audio ? <audio controls src={asset.media.url} aria-label="Asset audio preview"/> : <video controls src={asset.media.url} poster={asset.media.thumbnail} aria-label="Asset footage preview"/> : <div><Upload size={32}/><p>Add {audio?'sound':'footage'} to preview it here.</p></div>}
+     <button type="button" onClick={()=>onImport(asset.kind,m=>change({...asset,media:m,kind:m.kind==='image'?'image':asset.kind,name:asset.name||m.name}))}><Upload size={16}/>{asset.media?'Replace media':'Upload media'}</button>
+   </section>
+   <section className="media-asset-details">
+     <small>{audio?'Audio':'Footage'}</small>
+     <label className="field"><span>Name</span><input required value={asset.name} onChange={e=>change({...asset,name:e.target.value})}/></label>
+     <label className="field"><span>Description & search keywords</span><textarea rows={5} value={asset.description||''} onChange={e=>change({...asset,description:e.target.value})}/></label>
+     {(asset.media?.attribution || asset.attribution)?.attribution && <div className="media-asset-credit"><strong>Recording credit</strong><p>{(asset.media?.attribution || asset.attribution).attribution}</p><p>Include the creator, source and license when publishing.</p>{['source','licenseUrl'].map(key=>{const value=(asset.media?.attribution || asset.attribution)[key];return /^https?:\/\//i.test(value || '') ? <a key={key} href={value} target="_blank" rel="noreferrer">{key==='source'?'Original recording':'License'} ↗ </a> : null;})}</div>}
+     {asset.media && <p className="muted">{asset.media.duration?.toFixed(2)}s{asset.media.width?` · ${asset.media.width} × ${asset.media.height}`:''}</p>}
+     <details><summary>Media & organization</summary>
+       <label className="field"><span>Use existing media</span><select value={asset.media?.id||''} onChange={e=>change({...asset,media:project.assets.find(a=>a.media?.id===e.target.value)?.media||null})}><option value="">No media attached</option>{project.assets.filter(a=>a.media&&(audio?a.media.kind==='audio':!a.media.kind||a.media.kind==='video')).map(a=><option key={a.id} value={a.media.id}>{a.name}</option>)}</select></label>
+       <label className="asset-scope-toggle"><input type="checkbox" checked={isProjectOnly(asset)} onChange={e=>change(setAssetProjectOnly({...asset},e.target.checked))}/>Project only</label>
+       <AssetOrganizationEditor organization={organization} assetKey={libraryAssetKey(project.id,asset)} asset={asset} defaultFolderId={initialFolderId}/>
+     </details>
+   </section>
+ </div>;
 }

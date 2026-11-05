@@ -17,19 +17,20 @@ import "./take-comparison.css";
 
 export function TakeComparison({
   project,
+  effectJob,
   selectedClipId,
   onClose,
   onPlay,
   timelinePlaying,
 }) {
-  const choices = comparisonChoices(project),
+  const choices = effectJob ? [{ key: "original", label: "Original snapshot", mediaId: effectJob.input.source.mediaId, duration: effectJob.input.source.duration }, { key: "result", label: effectJob.media.name, mediaId: effectJob.media.id, duration: effectJob.input.source.duration }] : comparisonChoices(project),
     preferred = choices.filter((c) => c.clipId === selectedClipId);
   const [keys, setKeys] = useState(() => {
     const activeId = project.clips.find(
       (c) => c.id === selectedClipId,
     )?.activeTake;
     const current =
-      preferred.find((c) => c.takeId === activeId) ||
+      (!effectJob && preferred.find((c) => c.takeId === activeId)) ||
       preferred.at(-1) ||
       choices.at(-1);
     const prior =
@@ -57,7 +58,7 @@ export function TakeComparison({
     setPosition(0);
     video.current?.pause();
     if (sources.some((s) => !s)) {
-      setError("Choose two completed takes to compare.");
+      setError("Choose two completed versions to compare.");
       return;
     }
     async function poll(id) {
@@ -71,7 +72,7 @@ export function TakeComparison({
         if (alive) setError(e.message);
       }
     }
-    api(`/projects/${project.id}/comparisons`, { a: keys[0], b: keys[1] })
+    api(`/projects/${project.id}/comparisons`, { a: keys[0], b: keys[1], ...(effectJob ? { effectJobId: effectJob.id } : {}) })
       .then((r) => {
         if (!alive) return;
         setPreview(r);
@@ -163,17 +164,18 @@ export function TakeComparison({
     }
   }
   toggleRef.current = toggle;
+  if (choices.length < 2) return <section className="comparison-empty"><Columns2 size={28}/><h3>Add another version to compare</h3><p>Keep your current result, then generate or import a second video version.</p><button onClick={onClose}>Back to preview</button></section>;
   return (
     <section
       ref={panel}
       className="take-comparison"
-      aria-label="Side-by-side take comparison"
+      aria-label="Side-by-side version comparison"
     >
       <header>
         <span>
-          <Columns2 size={15} /> Compare takes
+          <Columns2 size={15} /> Compare versions
         </span>
-        <small>One clock · frame-locked picture</small>
+        <small>Play together · listen to either version</small>
         <button
           className="icon"
           aria-label="Fullscreen comparison"
@@ -197,6 +199,7 @@ export function TakeComparison({
             <select
               aria-label={`Comparison ${side.toUpperCase()} take`}
               value={keys[i] || ""}
+              disabled={!!effectJob}
               onChange={(e) =>
                 setKeys(keys.map((k, j) => (i === j ? e.target.value : k)))
               }
@@ -278,14 +281,14 @@ export function TakeComparison({
           {position.toFixed(1)} / {(preview?.duration || 0).toFixed(1)}s
         </small>
       </footer>
-      <small className="comparison-caption">
+      <details className="comparison-caption"><summary>Playback details · originals unchanged</summary><small>
         {listen === "mute" ? "Muted" : `Listening to ${listen.toUpperCase()}`} ·
         aligned at clip start ·{" "}
         {Math.min(...sources.filter(Boolean).map((s) => s.duration)) > 60
           ? "first 60 seconds"
           : "common duration"}
-        · 640px-wide previews; originals unchanged
-      </small>
+        · 640px-wide previews
+      </small></details>
       {error && (
         <div role="alert">
           {error}

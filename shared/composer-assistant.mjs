@@ -1,3 +1,7 @@
+import { composerEvents } from "./composer-sequence.mjs";
+import { selectableLooks, isManualLook } from "./look-selection.mjs";
+// Effect suggestions use the public intent validator. Preparing never executes a job.
+export { prepareEffectIntent as prepareAssistantEffect, effectDefinitions as assistantEffects } from './effects.mjs';
 import {
   readCamera,
   writeCamera,
@@ -49,6 +53,7 @@ export function setCameraField(scene, field, value) {
   else scene.camera = writeCamera(scene.camera, { [field]: value });
 }
 export function appearanceOwner(draft, id) {
+  if (isManualLook(draft, id)) return "manual";
   return (
     draft.assistant?.appearances?.[id] ||
     (draft.referenceOptions?.[id]?.variantId &&
@@ -84,7 +89,8 @@ export function markAssistantManualEdits(before, after) {
       ) {
         draft.assistant ??= {};
         draft.assistant.appearances ??= {};
-        draft.assistant.appearances[id] = "manual";
+        draft.assistant.appearances[id] = draft.referenceOptions?.[id]?.variantId === "auto" ? "inherited" : "manual";
+        if (draft.referenceOptions?.[id]) draft.referenceOptions[id].lookLocked = draft.referenceOptions[id].variantId !== "auto";
       }
   }
 }
@@ -162,11 +168,15 @@ export function assistantContext(
       selected: draft.referenceOptions?.[a.id]?.variantId || "auto",
       options: draft.referenceOptions?.[a.id] || {},
       media: mediaKey(a.media),
-      variants: (a.variants || []).slice(0, 12).map((v) => ({
+      keywords: a.libraryTags || [],
+      visualBrief: a.visualBrief || {},
+      variants: selectableLooks(a).map((v) => ({
         id: v.id,
         name: limit(v.name, 100),
         description: limit(v.description),
         tags: v.tags,
+        keywords: v.keywords || [],
+        visualBrief: v.visualBrief || {},
         media: mediaKey(v.media),
       })),
     }));
@@ -227,7 +237,7 @@ export function assistantContext(
     draftId: draft.id,
     sceneId: scene.id,
     index,
-    text: scene.text || "",
+    text: [scene.text, ...composerEvents(scene).filter(e => e.kind !== "speak").map(e => e.text)].filter(Boolean).join("\n"),
     dialogue: scene.dialogue || [],
     general: limit(draft.general),
     notes: limit(draft.notes),
@@ -403,7 +413,7 @@ export function validateAssistantDecision(raw, context) {
         evidence: a.evidence,
       });
     else if (
-      /\b(?:not|without|no longer|removes?|takes? off)\b/i.test(a.evidence) ||
+      /\b(?:not|without|no longer|removes?|takes? off)\b|(?:^|\s)(?:لا|ليس|ليست|بدون|غير|تخلع|يخلع)(?:\s|$)/iu.test(a.evidence) ||
       context.prior?.takeId ||
       context.index !== 0 ||
       Object.values(context.frames).some((f) => f?.mode && f.mode !== "none") ||

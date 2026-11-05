@@ -3,6 +3,7 @@ export const visualBriefFields = {
   character: [['age','Age / life stage'],['features','Face, hair & defining features'],['silhouette','Build / species & proportions'],['wardrobe','Clothing & accessories']],
   location: [['silhouette','Layout & architecture'],['materials','Materials & details'],['palette','Colors & atmosphere']],
   prop: [['silhouette','Shape & proportions'],['materials','Materials & construction'],['palette','Colors & defining details']],
+  image: [["features","Subject & composition"],["materials","Details & texture"],["palette","Color & light"]],
   style: [['features','Visual language'],['materials','Texture & medium'],['palette','Color & light']],
 };
 export function normalizeVisualBrief(value = {}, kind) {

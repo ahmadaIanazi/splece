@@ -1,3 +1,4 @@
+import {tokenPricing} from "./ai-routing.mjs";
 // Frozen rate card. Estimates are never represented as provider-confirmed bills.
 export const DEEPSEEK_RATE_SOURCE =
   "https://api-docs.deepseek.com/quick_start/pricing/";
@@ -50,8 +51,10 @@ export function textCostEstimate(model, usage, at = Date.now()) {
 }
 
 export function usageReceipt(data, config, at = Date.now()) {
-  const provider = config.mode === "deepseek" ? "deepseek" : "venice";
+  const provider = config.provider || (config.mode === "deepseek" ? "deepseek" : ["openai","openrouter"].includes(config.mode) ? config.mode : "venice");
   const model = data.model || config.model;
+  const pricing=tokenPricing(config.pricing);
+  const tokenAmount=pricing && data.usage ? pricing.prompt*data.usage.prompt_tokens+pricing.completion*data.usage.completion_tokens : null;
   return {
     provider,
     model,
@@ -59,7 +62,7 @@ export function usageReceipt(data, config, at = Date.now()) {
     usage: data.usage || null,
     receivedAt: at,
     estimate:
-      provider === "deepseek" ? textCostEstimate(model, data.usage, at) : null,
+      provider === "deepseek" ? textCostEstimate(model, data.usage, at) : tokenAmount!==null && Number.isFinite(tokenAmount) && tokenAmount>=0 ? {amount:tokenAmount,currency:"USD",note:"Catalog token estimate"} : null,
   };
 }
 const finite = (v) =>
@@ -76,7 +79,7 @@ export function costRecord(job, kind = "video", confirmed = null) {
     ? snap.executionMode
       ? snap.executionMode !== "live"
       : !["venice", "kie", "fal", "fal.ai"].includes(provider)
-    : !["venice", "deepseek"].includes(job.config?.mode);
+    : !["venice", "deepseek", "openai", "openrouter"].includes(job.config?.mode);
   const record = {
     key: `${kind}:${job.id}`,
     id: job.id,

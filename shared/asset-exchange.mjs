@@ -11,6 +11,7 @@ const voiceFields = [
   "description",
 ];
 const tags = [
+  "setting",
   "clothing",
   "pose",
   "angle",
@@ -42,6 +43,7 @@ export function assetContext(asset, project) {
       ...(character
         ? {
             gender: asset.gender || "",
+            characterProfile: asset.characterProfile || {},
             delivery: asset.delivery || "",
             voice: asset.voice || {},
           }

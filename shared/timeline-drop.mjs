@@ -1,7 +1,7 @@
 export function timelineDropPreview(project, item, time) {
   if (!item) return null;
   const clips = [...project.clips].sort((a, b) => a.start - b.start);
-  if (item.asset && !["footage", "audio"].includes(item.asset.kind)) {
+  if (item.asset && !["footage", "audio", "image"].includes(item.asset.kind)) {
     const clip = clips.find(
       (c) => time >= c.start && time < c.start + c.duration,
     );

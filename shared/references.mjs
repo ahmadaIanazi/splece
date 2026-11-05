@@ -1,3 +1,4 @@
+import { supportsSoundReference, validSoundSource } from "./video-sound-continuity.mjs";
 import { referenceRoleInstruction, referenceRoleErrors } from "./reference-roles.mjs";
 // Explicit mappings from Venice's reference/video guides. Unknown families stay unavailable.
 export function referenceCapabilities(id, type) {
@@ -27,6 +28,7 @@ export function referenceCapabilities(id, type) {
   if (/^wan-3-0-(?:(?:prime-)?pro-|prime-)?reference-to-video$/.test(id))
     return {
       referenceMode: "flat",
+      continuityAsReference: true,
       frames: false,
       endFrame: false,
       maxReferences: 30,
@@ -81,7 +83,7 @@ export function referenceBindings(references, model) {
     else if (["elements", "flat"].includes(model?.referenceMode))
       for (const m of media)
         bindings.push({
-          tag: `${model.referenceLabel || "@Image"}${++image}`,
+          tag: model.referenceTokenStyle === "xai" ? `<IMAGE_${image++}>` : `${model.referenceLabel || "@Image"}${++image}`,
           assetId: ref.id,
           name: ref.name,
           role: ref.role,
@@ -142,13 +144,17 @@ export function bindReferencePrompt(compiled, model) {
   };
 }
 export function referenceErrors(compiled, model) {
-  if (!model?.referenceMode) return [];
+  if (!model?.referenceMode) return compiled.soundReferenceError ? [compiled.soundReferenceError] : compiled.soundReference ? ["This model cannot receive the saved sound reference."] : [];
   const issues = referenceRoleErrors(compiled.references),
     bindings = referenceBindings(compiled.references, model),
     start = compiled.boundaries.start,
     end = compiled.boundaries.end;
-  if (/@(?:Video|Audio)\s*\d+/i.test(compiled.text))
-    issues.push("Audio/video reference tags are not attached by this image-reference workflow. Use the supported soundtrack or lip-sync workflow instead.");
+  if ((start && !model.frames) || (end && (!model.frames || model.endFrame === false))) issues.push("This model cannot accept the selected start or end frame. Remove that frame or choose a frame model.");
+  const hasSound = supportsSoundReference(model) && validSoundSource(compiled.soundReference);
+  if (compiled.soundReferenceError) issues.push(compiled.soundReferenceError);
+  if (compiled.soundReference && !hasSound) issues.push("This model cannot receive the saved sound reference.");
+  if (/@Video\s*\d+/i.test(compiled.text) || [...compiled.text.matchAll(/@?Audio\s*(\d+)\b/gi)].some(m => !hasSound || Number(m[1]) !== 1))
+    issues.push("Audio/video reference tags are not attached to matching media for this workflow. Audio 1 requires an enabled sound continuity sample on Wan References.");
   const imageCount = compiled.references.reduce(
     (n, r) =>
       n +
@@ -176,7 +182,7 @@ export function referenceErrors(compiled, model) {
         "Attach a character, scene image or start frame for this reference model.",
       );
   }
-  if (model.referenceMode === "flat" && !bindings.length)
+  if (model.referenceMode === "flat" && !bindings.length && !hasSound)
     issues.push("Attach at least one image reference for this model.");
   if (model.referenceMode === "single") {
     const refs = compiled.references.flatMap(
@@ -191,7 +197,7 @@ export function referenceErrors(compiled, model) {
   }
   if (model.requiresEnd && !end)
     issues.push("This transition model requires an end frame.");
-  for (const match of compiled.text.matchAll(/@(Image|Element)(\d+)\b/g))
+  for (const match of compiled.text.matchAll(/<IMAGE_\d+>|@(Image|Element)(\d+)\b/g))
     if (!bindings.some((b) => b.tag === match[0]))
       issues.push(`${match[0]} has no attached image for this model.`);
   return [...new Set(issues)];

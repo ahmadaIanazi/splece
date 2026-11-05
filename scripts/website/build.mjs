@@ -17,6 +17,9 @@ for (const name of [
   "splece.svg",
   "brand/splece-logo-white.svg",
   "marketing/splece-editor.webp",
+  "marketing/demo/after-the-rain.mp4",
+  "marketing/demo/coast.jpg",
+  "marketing/demo/walk.jpg",
 ]) {
   const to = path.join(output, name);
   await fs.mkdir(path.dirname(to), { recursive: true });

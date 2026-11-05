@@ -1,3 +1,4 @@
+import {characterIdentityText, normalizeCharacterProfile} from "./character-looks.mjs";
 import { normalizeVisualBrief, visualBriefText } from "./asset-brief.mjs";
 import {
   effectiveCreativeDirection,
@@ -6,6 +7,7 @@ import {
 import { renderPromptPreset } from "./prompt-library.mjs";
 import { workflowText } from "./workflows.mjs";
 export const imageModels = [
+
   {id:"venice-grok-quality", provider:"venice", model:"grok-imagine-image-quality", name:"Grok Imagine Quality", mode:"create", price:0.06, promptLimit:7500},
   {
     id: "venice-grok",
@@ -39,7 +41,18 @@ export const imageModels = [
     name: "FLUX.2 Edit",
     mode: "vary",
   },
+  {id:'xai-imagine-create',provider:'xai',model:'grok-imagine-image-2.0',name:'Grok Imagine 2 · xAI',mode:'create',price:.04,inputPrice:.01,promptLimit:32000},
+  {id:'xai-imagine-edit',provider:'xai',model:'grok-imagine-image-2.0',name:'Grok Imagine 2 Edit · xAI',mode:'vary',price:.06,inputPrice:.01,maxReferences:5,promptLimit:32000},
 ];
+// Venice adapters currently expose fixed/native output; do not invent low-cost sizes.
+for (const model of imageModels) model.resolutions = model.provider === 'fal' ? ['480p','720p','1080p'] : ['1K'];
+export function imageDimensions(input) {
+  const original = imageRatios[input.ratio];
+  if (!input.resolution || input.resolution === '1K') return original;
+  const side = parseInt(input.resolution,10);
+  const scale = side / Math.min(...original);
+  return original.map(n=>Math.round(n*scale));
+}
 export const assetLooks = [
   { id: "auto", name: "Auto", text: "" },
   {
@@ -74,6 +87,7 @@ export const assetFramings = {
   ],
   style: [["mood", "Mood study"]],
   frame: [["scene", "Scene frame"]],
+  image: [["image", "Single image"]],
 };
 export const imageRatios = {
   "1:1": [1024, 1024],
@@ -98,11 +112,12 @@ export function normalizeImageInput(value) {
     look = value.look || "auto",
     ratio = value.ratio || "1:1";
   if (
-    !assetFramings[kind].some(([id]) => id === framing) ||
+    (framing !== "auto" && !assetFramings[kind].some(([id]) => id === framing)) ||
     !assetLooks.some((l) => l.id === look) ||
     !imageRatios[ratio]
   )
     throw Error("Choose a supported look, framing and shape.");
+  if (value.resolution !== undefined && !model.resolutions.includes(value.resolution)) throw Error('Choose a supported image resolution.');
   if (kind === 'frame' && !['start','end'].includes(value.boundary)) throw Error('Choose start or end frame.');
   const input = {
     assetId: text("assetId", 100, true),
@@ -113,8 +128,10 @@ export function normalizeImageInput(value) {
     description: text("description", 4000, true),
     visualBrief: normalizeVisualBrief(value.visualBrief, kind),
     kind,
+    ...(kind === "character" ? {characterProfile: normalizeCharacterProfile(value.characterProfile)} : {}),
     mode,
     modelId: model.id,
+    ...(value.resolution ? {resolution:value.resolution} : {}),
     framing,
     look,
     ratio,
@@ -127,11 +144,13 @@ export function normalizeImageInput(value) {
   return input;
 }
 export function imageAssetPrompt(input, project) {
-  const subject = [input.name, input.description].filter(Boolean).join(": ");
+  const subject = [input.name, input.description, characterIdentityText(input)].filter(Boolean).join(": ");
   const identity = visualBriefText(input.visualBrief, input.kind);
   let recipe = null,
     text;
-  if (input.kind === "character") {
+  if (input.framing === "auto") {
+    text = `Create the described image. Follow the written composition, pose, setting and rendering style; if unspecified, follow the reference. Do not impose a portrait, studio backdrop or contact sheet.\n${subject}`;
+  } else if (input.kind === "character") {
     recipe = renderPromptPreset(
       input.framing === "sheet" ? "character-views" : "identity-portrait",
       input.framing === "sheet"
@@ -159,7 +178,7 @@ export function imageAssetPrompt(input, project) {
     });
     text = recipe.text;
   } else
-    text = `${input.kind === "prop" ? "Reusable object reference: consistent proportions and materials, simple neutral background." : "Visual mood reference: coherent palette, materials and lighting."}\n${subject}\n${input.framing === "detail" ? "Close detail showing surface and construction." : ""}`;
+    text = `${input.kind === "prop" ? "Reusable object reference: consistent proportions and materials, simple neutral background." : input.kind === "image" ? "Create the described image. Follow the requested subjects, composition and visual style." : "Visual mood reference: coherent palette, materials and lighting."}\n${subject}\n${input.framing === "detail" ? "Close detail showing surface and construction." : ""}`;
   const role =
     input.mode === "vary"
       ? input.kind === "character"
@@ -173,10 +192,12 @@ export function imageAssetPrompt(input, project) {
   const creative = effectiveCreativeDirection(project);
   if (input.look !== "auto") delete creative.look;
   if (input.mode === "vary") {
-    const existing = project.assets?.find(a=>a.id===input.assetId)?.visualBrief || {};
+    const asset = project.assets?.find(a=>a.id===input.assetId);
+    const existing = ((!asset?.media?.id || input.sourceMediaId === asset?.media?.id) ? asset?.visualBrief : asset?.variants?.find(v=>v.media?.id===input.sourceMediaId)?.visualBrief) || {};
     const changed = Object.fromEntries(Object.entries(input.visualBrief || {}).filter(([key,value])=>value !== existing[key]));
     const editPrompt = [
       input.description,
+      characterIdentityText(input),
       input.variationPrompt,
       role,
       input.framing === "sheet" ? "Character sheet: front, rear and face close-up of the same subject, not three people." : input.framing === "full" ? "Full-body view, head to feet." : "",
@@ -197,7 +218,7 @@ export function imageAssetPrompt(input, project) {
     input.mode === "vary" ? (input.framing === "sheet" ? "Character reference sheet: front view, rear view and face close-up of the same subject, not three people." : input.framing === "full" ? "Show the complete subject, head to feet." : "Keep the requested composition readable; the requested variation may change the background.") : "",
     identity ? "Visual identity details (explicit refinements to the description):\n" + identity : "",
     input.variationPrompt ? "Requested variation (keep the source identity): " + input.variationPrompt : "",
-    input.kind === "location"
+    input.framing === "auto" ? "Preserve the described subject identity and anatomy. Explicit written direction takes priority over project defaults." : input.kind === "location"
       ? "Environment-only asset: do not render people mentioned in story context. Show the place itself, without characters."
       : input.kind === "character"
         ? "Exactly one character identity; multiple sheet panels are views of that same individual. Preserve the specified age, species, anatomy, defining features and cultural clothing. For animals or creatures use their described anatomy and surface, not human skin or human proportions. Show readable eyes and recognizable features; soft even light, restrained contrast. Ignore dialogue, occupation, biography and story action as things to depict; this is a reusable identity reference."
@@ -206,7 +227,7 @@ export function imageAssetPrompt(input, project) {
     creativeDirectionText(creative, { camera: false }),
     direction ? "Project art direction: " + direction + (input.look === "auto" ? "\nInherit its rendering style, palette and lighting only; ignore story action and camera movement." : "\nUse its palette and lighting only. The explicitly selected image style takes priority over its rendering medium.") : "",
     workflowText(project.settings, "image"),
-    input.kind === "character" ? "Age fidelity is essential even in stylized 3D: an adult must read unmistakably as an adult, with mature facial structure and adult head-to-body proportions, not a child, toddler, baby-faced doll or chibi. A child or animal must retain its explicitly described age and species. Do not infantilize adults because the story is for children. For text-to-image identity creation use a plain warm-grey studio backdrop and soft even lighting; for reference editing follow the requested setting." : "",
+    input.kind === "character" && input.framing !== "auto" ? "Age fidelity is essential even in stylized 3D: an adult must read unmistakably as an adult, with mature facial structure and adult head-to-body proportions, not a child, toddler, baby-faced doll or chibi. A child or animal must retain its explicitly described age and species. Do not infantilize adults because the story is for children. For text-to-image identity creation use a plain warm-grey studio backdrop and soft even lighting; for reference editing follow the requested setting." : "",
     "Output one clean image, without captions, labels or watermarks. Do not add unrelated characters or story action.",
   ]
     .filter(Boolean)

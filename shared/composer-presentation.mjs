@@ -1,4 +1,4 @@
-import { compatibleVideoModels, fitVideoSettings } from "./video-selection.mjs";
+import { compatibleVideoModels, fitVideoSettings, videoModelInputs } from "./video-selection.mjs";
 export function modelTitle(model) {
   const name = model?.name || model?.id || "Choose model";
   return (
@@ -13,7 +13,8 @@ export function modelTitle(model) {
 }
 export function modelFit(model, compiled, settings) {
   const compatible = compatibleVideoModels([model], compiled).length > 0;
-  const images = (compiled?.references || []).reduce(
+  const candidate = videoModelInputs(compiled, model);
+  const images = (candidate.references || []).reduce(
     (n, r) => n + (r.selectedMediaList?.length || (r.selectedMedia ? 1 : 0)),
     0,
   );
@@ -21,6 +22,8 @@ export function modelFit(model, compiled, settings) {
   if (!compatible) {
     if (model.supported === false)
       reason = model.unavailableReason || "Unavailable in this workflow";
+    else if ((candidate.boundaries.start && !model.frames) || (candidate.boundaries.end && (!model.frames || model.endFrame === false)))
+      reason = "Remove the unsupported start/end frame, or choose a frame model";
     else if (model.referenceMode === "none" && images)
       reason = "Text only · remove image references";
     else if (images > (model.maxReferences ?? 8))

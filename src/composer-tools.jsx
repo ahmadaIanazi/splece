@@ -28,6 +28,7 @@ import {
   Clock3,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
   Sparkles,
   Volume2,
   ShieldCheck,
@@ -71,6 +72,9 @@ export function HoldGenerate({
   requestKey,
   label = "video",
   action = "generate",
+  quality,
+  onQualityChange,
+  qualityOptions,
 }) {
   const [progress, setProgress] = useState(0),
     start = useRef(null),
@@ -85,7 +89,7 @@ export function HoldGenerate({
   };
   useEffect(() => {
     cancel();
-  }, [requestKey, disabled, enabled]);
+  }, [requestKey, disabled, enabled, quality]);
   useEffect(() => {
     const reset = () => cancel();
     window.addEventListener("blur", reset);
@@ -119,11 +123,20 @@ export function HoldGenerate({
     }
   };
   return (
+    <div className={`generation-pill ${quality ? 'has-quality' : ''} ${quality === 'final' ? 'is-final' : ''}`}>
+    {onQualityChange && <div className="generation-pill-selector">
+      <select aria-label="Generation quality" title="Choose Draft or Final" value={quality} disabled={busy}
+        onChange={e=>{cancel();onQualityChange(e.target.value);}}>
+        <option value="draft">Hold to Generate Draft · {qualityOptions?.draft || 'provider default'}</option>
+        <option value="final">Hold to Generate · Final · {qualityOptions?.final || 'provider default'} · may cost more</option>
+      </select>
+      <span aria-hidden="true"><ChevronDown size={13}/></span>
+    </div>}
     <button
       ref={button}
       type="button"
       className="creative-generate hold-generate"
-      aria-label={enabled ? `Hold to ${action} ${label}` : `${action} ${label}`}
+      aria-label={`${enabled ? `Hold to ${action} ${label}` : `${action} ${label}`}${quality ? ` · ${quality}` : ""}`}
       title={
         enabled
           ? `Hold, then release to ${action} · hold Enter with keyboard · release early to cancel`
@@ -164,7 +177,7 @@ export function HoldGenerate({
         onGenerate(e);
       }}
     >
-      <Sparkles size={15} />
+      {!quality && <Sparkles size={15} />}
       <span>
         {busy
           ? "Submitting…"
@@ -173,9 +186,11 @@ export function HoldGenerate({
             : enabled
               ? `Hold to ${action}`
               : action[0].toUpperCase() + action.slice(1)}
+        {!busy && progress < 1 && quality === "draft" ? " Draft" : ""}
         <small>{price}</small>
       </span>
     </button>
+    </div>
   );
 }
 
@@ -314,7 +329,7 @@ export function ComposerAssets({
                         ? adopt(a._libraryId).catch((e) =>
                             setLibraryError(e.message),
                           )
-                        : insert(a.id)
+                        : (insert(a.id), a.kind === "character" && setInspect(a.id))
                   }
                 >
                   <span className="asset-thumb-image">
@@ -445,15 +460,16 @@ export function ModelBrowser({
 }) {
   const [provider, setProvider] = useState("all"),
     [query, setQuery] = useState(""),
-    [starred, setStarred] = useState(false);
+    [starred, setStarred] = useState(false),
+    [matchesOnly, setMatchesOnly] = useState(false);
   const providers = [
     ...new Set(models.map((m) => m.provider || "Local simulator")),
   ];
   const rows = models
     .map((m) => ({ m, ...modelFit(m, prepared, draft.settings) }))
     .filter(
-      ({ m }) =>
-        (provider === "all" ||
+      ({ m, compatible }) =>
+        (!matchesOnly || compatible) && (provider === "all" ||
           provider === (m.provider || "Local simulator")) &&
         (!starred || favorites.includes(m.id) || m.id === favoriteId) &&
         `${m.name} ${m.id}`.toLowerCase().includes(query.toLowerCase()),
@@ -486,6 +502,7 @@ export function ModelBrowser({
         </button>
       </div>
       <nav className="provider-filters" aria-label="Generation provider">
+        <button aria-pressed={matchesOnly} onClick={() => setMatchesOnly(!matchesOnly)}>Matches my inputs</button>
         {["all", ...providers].map((v) => (
           <button
             key={v === "No movement" ? "Locked camera" : v}
@@ -496,6 +513,7 @@ export function ModelBrowser({
           </button>
         ))}
       </nav>
+      <button type="button" className="text-button" aria-pressed={!draft.manualVideoModel} onClick={() => onSelect("")}>{draft.manualVideoModel ? "Follow my default again" : "Following my default"}</button>
       <div className="model-cards">
         {rows.map(({ m, compatible, reason, adjustments }) => (
           <article
@@ -505,7 +523,8 @@ export function ModelBrowser({
             <button
               className="model-pick"
               aria-label={`Use ${modelTitle(m)}`}
-              disabled={!compatible}
+              aria-pressed={current?.id === m.id}
+              disabled={m.supported === false}
               onClick={() => onSelect(m.id)}
             >
               <b>{modelTitle(m)}</b>
@@ -520,6 +539,7 @@ export function ModelBrowser({
                       : "Video"}
               </small>
               <span className="model-badges">
+                {m.id === draft.manualVideoModel && <em>Chosen by you</em>}
                 {m.id === favoriteId && <em>Default</em>}
                 {m.id === recommended && <em>Recommended for setup</em>}
                 {compatible && !adjustments.length && <em>Matches setup</em>}
@@ -547,7 +567,7 @@ export function ModelBrowser({
                 {m.promptLimit?.toLocaleString() || "—"} characters
               </small>
               {!compatible ? (
-                <strong className="model-fit-reason">{reason}</strong>
+                <strong className="model-fit-reason">{reason}{m.supported !== false && " · Choose to review inputs"}</strong>
               ) : adjustments.length > 0 ? (
                 <small className="model-adjustments">
                   Adjusts {adjustments.join(" · ")}
@@ -572,8 +592,8 @@ export function ModelBrowser({
                   : "Privacy and content-policy labels are not supplied by this catalog."}
               </p>
               <p>
-                Exact price is calculated after selection for your duration and
-                settings.
+                A price estimate is shown after selection. Its basis depends on
+                the provider and settings.
               </p>
             </details>
           </article>

@@ -1,15 +1,70 @@
+import { supportsSoundReference } from "./video-sound-continuity.mjs";
+
+// Project canonical inputs for each candidate, not the currently selected model.
+export function videoModelInputs(compiled, model) {
+  const source = compiled?.modelInputs || compiled || {};
+  const references = (source.references || []).filter(
+    (r) => r.kind !== "continuity",
+  );
+  const boundaries = { ...source.boundaries };
+  if (!compiled?.modelInputs) {
+    boundaries.start ||= compiled?.continuityReference;
+    boundaries.end ||= compiled?.continuityEndReference;
+  }
+  for (const key of ["start", "end"]) {
+    const frame = boundaries[key];
+    if (
+      !frame ||
+      (model.frames && (key === "start" || model.endFrame !== false))
+    )
+      continue;
+    if (
+      frame.mode !== "pinned" &&
+      model.continuityAsReference &&
+      (frame.timelineCapture ||
+        (frame.mode === "auto" &&
+          key === "start" &&
+          source.before?.takes?.some((t) => t.id === frame.takeId)))
+    ) {
+      references.push({
+        kind: "continuity",
+        selectedMedia: { id: `continuity-${key}` },
+      });
+      boundaries[key] = null;
+    } else if (frame.mode === "auto") boundaries[key] = null;
+  }
+  return { ...compiled, references, boundaries };
+}
+
+// A deliberate choice stays selected; incompatible inputs are explained before submission.
+export function selectedVideoModel(
+  models,
+  compatible,
+  settings,
+  favoriteId,
+  manualId,
+) {
+  return (
+    models.find(
+      (m) =>
+        m.id === manualId && m.id === settings.model && m.supported !== false,
+    ) || preferredVideoModel(compatible, settings.model, favoriteId)
+  );
+}
+
 export function compatibleVideoModels(models, compiled) {
-  const refs = compiled?.references || [];
-  const counts = refs.map((r) => ({
-    ...r,
-    count: (r.selectedMediaList || (r.selectedMedia ? [r.selectedMedia] : []))
-      .length,
-  }));
-  const total = counts.reduce((n, r) => n + r.count, 0);
   return models.filter((m) => {
+    const candidate = videoModelInputs(compiled, m);
+    const refs = candidate.references;
+    const counts = refs.map((r) => ({
+      ...r,
+      count: (r.selectedMediaList || (r.selectedMedia ? [r.selectedMedia] : []))
+        .length,
+    }));
+    const total = counts.reduce((n, r) => n + r.count, 0);
     // Automatic continuity is optional; explicit/pinned frames are requirements.
-    const startFrame = compiled?.boundaries?.start;
-    const endFrame = compiled?.boundaries?.end;
+    const startFrame = candidate.boundaries?.start;
+    const endFrame = candidate.boundaries?.end;
     const start = !!startFrame && (startFrame.mode !== "auto" || !!m.frames);
     const end =
       !!endFrame &&
@@ -19,7 +74,14 @@ export function compatibleVideoModels(models, compiled) {
       return false;
     if (m.requiresEnd && !end) return false;
     if (m.referenceMode === "none") return !total && !start && !end;
-    if (m.referenceMode === "flat") return total > 0 && !start && !end;
+    if (m.referenceMode === "flat")
+      return (
+        (total > 0 ||
+          ((compiled?.soundReferenceIntent || compiled?.soundReference) &&
+            supportsSoundReference(m))) &&
+        !start &&
+        !end
+      );
     if (m.referenceMode === "single") return start ? total === 0 : total === 1;
     if (m.referenceMode === "elements") {
       const elements = counts.filter(

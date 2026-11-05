@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   removeStorySlot,
+  removeActiveGeneration,
   generationPool,
   restorePoolEntry,
 } from "../shared/generation-pool.mjs";
@@ -187,4 +188,78 @@ test("Legacy gaps, leading gaps, overlap, insertion and late suggestions all bec
   const reserved = reserveGenerationSlot(p, "far", [], () => "far");
   assert.equal(reserved.start, 20);
   assert.equal(p.drafts.at(-1).start, 20);
+});
+
+for (const [active, expected] of [['b', 'b2'], ['b2', 'b'], ['b3', 'b2']]) {
+  test(`Delete ${active} removes only that generation and selects ${expected}`, () => {
+    const p = project(), c = p.clips[1];
+    c.takes = [media('b'), media('b2'), media('b3')];
+    c.activeTake = active;
+    const before = structuredClone(p);
+    const result = removeActiveGeneration(p, 'b');
+    assert.equal(result.removedClip, false);
+    assert.equal(p.clips.length, 3);
+    assert.equal(c.activeTake, expected);
+    assert.deepEqual(c.takes.map(t => t.id), ['b', 'b2', 'b3'].filter(id => id !== active));
+    assert.equal(c.volume, 0.4);
+    assert.equal(c.mute, true);
+    assert.deepEqual(p.audioClips, before.audioClips);
+    assert.deepEqual(p.remarks, before.remarks);
+    const saved = JSON.parse(JSON.stringify(p));
+    const jobs = ['b', 'b2', 'b3'].map(id => job(id, 'b'));
+    assert.equal(adoptReadyGenerations(saved, jobs), false);
+    assert.deepEqual(saved.clips[1].takes, c.takes);
+    // Undo uses the unmodified project snapshot; redo preserves the exclusion.
+    assert.equal(adoptReadyGenerations(before, jobs), false);
+    assert.equal(before.clips[1].takes.length, 3);
+    assert.equal(before.clips[1].activeTake, active);
+  });
+}
+test('Deleting a generation restores the neighboring take trim and ripples following clips', () => {
+  const p = project(), c = p.clips[1];
+  c.takes.push(media('b2', 10)); c.activeTake = 'b2';
+  c.takeEdits = { b: { in: 1, duration: 3 } };
+  removeActiveGeneration(p, 'b');
+  assert.equal(c.in, 1); assert.equal(c.duration, 3);
+  assert.equal(p.clips[2].start, 8);
+});
+test('Deleted newest result stays excluded when an older job finishes later; new jobs still work', () => {
+  const p = project(), c = p.clips[1];
+  const jobs = [job('b', 'b'), {...job('b2', 'b'), createdAt: 3}];
+  adoptReadyGenerations(p, jobs);
+  removeActiveGeneration(p, 'b');
+  jobs.push({...job('older', 'b'), createdAt: 2});
+  assert.equal(adoptReadyGenerations(p, jobs), true);
+  assert.equal(c.activeTake, 'older');
+  assert.ok(!c.takes.some(t => t.id === 'b2'));
+  jobs.push({...job('newest', 'b'), createdAt: 4});
+  adoptReadyGenerations(p, jobs);
+  assert.equal(c.activeTake, 'newest');
+  restorePoolEntry(p, jobs, 'job:jb2', 0);
+  assert.equal(c.activeTake, 'b2');
+  assert.ok(!c.removedTakeIds.includes('b2'));
+});
+test('Single-generation Delete removes only its clip; whole-slot Cut preserves the full stack', () => {
+  const p = project();
+  assert.equal(removeActiveGeneration(p, 'b').removedClip, true);
+  assert.deepEqual(p.clips.map(c => c.id), ['a', 'c']);
+  assert.equal(p.removedClips[0].clip.takes.length, 1);
+  const q = project(); q.clips[1].takes.push(media('b2'));
+  removeStorySlot(q, 'b');
+  assert.equal(q.removedClips[0].clip.takes.length, 2);
+});
+test('Repair deletion cannot switch to footage too short for the slot', () => {
+  const p = project(), c = p.clips[1]; c.repair = true;
+  c.takes.push(media('short', 2));
+  const before = structuredClone(p);
+  assert.throws(() => removeActiveGeneration(p, 'b'), /too short/);
+  assert.deepEqual(p, before);
+});
+
+test('removing an inactive version preserves current trim and active result',async()=>{
+ const {removeGeneration}=await import('../shared/generation-pool.mjs');
+ const p={clips:[{id:'c',activeTake:'good',in:2,duration:5,takes:[{id:'bad',duration:10},{id:'good',duration:10}]}]};
+ removeGeneration(p,'c','bad');
+ assert.equal(p.clips[0].activeTake,'good');assert.equal(p.clips[0].in,2);assert.equal(p.clips[0].duration,5);
+ assert.deepEqual(p.clips[0].removedTakeIds,['bad']);assert.equal(p.clips[0].takes.length,1);
 });

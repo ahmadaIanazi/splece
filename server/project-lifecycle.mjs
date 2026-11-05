@@ -31,7 +31,7 @@ export function projectLifecycle(store, library) {
     return list();
   }
   function tables() {
-    return ["jobs", "smart_jobs", "story_jobs", "soundtrack_runs", "lip_sync_jobs", "image_jobs", "photo_analyses", "asset_analyses"].filter((t) =>
+    return ["jobs", "smart_jobs", "story_jobs", "soundtrack_runs", "lip_sync_jobs", "effect_jobs", "image_jobs", "photo_analyses", "asset_analyses", "local_analysis", "reel_jobs"].filter((t) =>
       store.db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
         .get(t),
@@ -60,7 +60,7 @@ export function projectLifecycle(store, library) {
         .map((r) => JSON.parse(r.body))
         .some(
           (j) =>
-            !["ready", "failed", "cancelled", "interrupted", "quoted"].includes(j.state),
+            !["ready", "failed", "cancelled", "interrupted", "quoted", "needs_attention"].includes(j.state),
         );
       if (active)
         throw Error(

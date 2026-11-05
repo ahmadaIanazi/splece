@@ -2,7 +2,7 @@
 export function comparisonChoices(project) {
   return project.clips.flatMap((clip) =>
     clip.takes
-      .filter((t) => t.url)
+      .filter((t) => t.url && t.kind !== "image" && t.kind !== "audio")
       .map((take, i) => {
         const edit =
           take.id === clip.activeTake
@@ -21,8 +21,8 @@ export function comparisonChoices(project) {
           mediaId: take.id,
           label:
             (project.drafts.find((d) => d.targetId === clip.id || d.id === clip.draftId)?.name ||
-              take.name ||
-              "Clip") + ` · Take ${i + 1}`,
+              (!/^(take|version) \d+$/i.test(take.name||"") && take.name) ||
+              "Clip") + ` · Version ${i + 1}`,
           thumbnail: take.thumbnail,
           in: Math.max(0, edit.in || 0),
           duration: edit.duration || clip.duration,

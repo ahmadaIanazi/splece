@@ -26,7 +26,7 @@ export function TimelineModes({
       <div
         role="tablist"
         aria-label="Timeline view"
-        aria-orientation="vertical"
+        aria-orientation="horizontal"
       >
         {modes.map(({ id, label, icon: Icon }, index) => (
           <button
@@ -44,8 +44,11 @@ export function TimelineModes({
                 ? "Sound · changes to apply"
                 : `${label} timeline`
             }
-            onClick={() => onChange(id)}
+            onClick={() => onChange(value === id ? "all" : id)}
             onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault(); event.stopPropagation(); select(0); return;
+              }
               let next;
               if (event.key === "ArrowDown" || event.key === "ArrowRight")
                 next = (index + 1) % modes.length;

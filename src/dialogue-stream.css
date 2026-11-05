@@ -419,7 +419,7 @@
     overflow-y: auto;
   }
   .creative-composer.dialogue-first .dialogue-stream {
-    min-height: 430px;
+    min-height: 320px;
     flex-shrink: 0;
   }
 }
@@ -640,4 +640,72 @@
   font-size: 11px;
   color: inherit;
   background: transparent;
+}
+
+/* One writing row: actor, text, and disclosure. The cast lives in its popover. */
+.stream-compose-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.stream-compose-writing {
+  flex: 1;
+  min-width: 0;
+}
+.stream-compose-writing[hidden],
+.stream-compose-actions[hidden] {
+  display: none;
+}
+.stream-compose-line > .stream-character-picker {
+  flex: 0 0 auto;
+  max-width: 120px;
+  padding-top: 4px;
+}
+.creative-composer .stream-character-picker.compact .stream-character-name {
+  min-height: 36px;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 8px;
+}
+.stream-character-picker.compact .stream-avatar {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+.stream-character-picker.compact .stream-character-name > span:nth-child(2) {
+  max-width: 60px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.creative-composer .stream-compose-collapse {
+  flex: 0 0 32px;
+  width: 32px;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+}
+.stream-compose-collapse[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.creative-composer .stream-compose-resume {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 0;
+  text-align: start;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+}
+.stream-compose.is-collapsed {
+  padding-block: 4px;
+}
+@container (max-width: 420px) {
+  .stream-character-picker.compact .stream-character-name > span:nth-child(2) {
+    display: none;
+  }
 }

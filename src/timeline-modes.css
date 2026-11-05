@@ -1,6 +1,8 @@
 .timeline-modes {
-  width: 56px;
-  min-width: 56px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   align-self: stretch;
   padding: 3px;
   background: transparent;
@@ -10,20 +12,21 @@
 }
 .timeline-modes [role="tablist"] {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 3px;
 }
 .timeline-modes .timeline-mode {
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
-  gap: 3px;
-  width: 100%;
-  height: 44px;
-  min-height: 44px;
-  padding: 3px 1px;
+  gap: 6px;
+  width: auto;
+  flex: 0 0 auto;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 10px);
   color: var(--muted, #a9aebb);
@@ -85,3 +88,5 @@
       background 120ms;
   }
 }
+
+@media (pointer: coarse) { .timeline-modes .timeline-mode { min-height: 44px; } }

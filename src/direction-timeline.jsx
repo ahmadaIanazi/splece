@@ -37,6 +37,8 @@ export function DirectionTimeline({
   update,
   onSeek,
   focused = false,
+  composerOpen = focused,
+  visible = true,
   onFocus,
 }) {
   const [selectedId, setSelectedId] = useState(null);
@@ -50,7 +52,7 @@ export function DirectionTimeline({
   const groups = (plan?.beats || []).filter((node) => !isStructureClip(node));
   const selected =
     records.find((record) => record.id === selectedId) ||
-    (focused ? records.at(-1) : null);
+    (focused || composerOpen ? records.at(-1) : null);
   const active =
     selected && preview?.id === selected.id
       ? { ...selected, ...preview }
@@ -270,6 +272,7 @@ export function DirectionTimeline({
   return (
     <section
       className={`direction-timeline${focused ? " focused" : ""}`}
+      hidden={!visible}
       aria-label="Timed creative direction"
       style={{ "--direction-accent": directionFamily(active || {}).color }}
     >
@@ -436,7 +439,7 @@ export function DirectionTimeline({
             </div>
           ))}
       </div>
-      {focused &&
+      {composerOpen &&
         composerHost &&
         createPortal(
           <DirectionComposer

@@ -5,6 +5,7 @@ import {
   Package,
   Palette,
   Film,
+  Images,
   AudioLines,
 } from "lucide-react";
 import { assetTypes } from "../shared/library-organization.mjs";
@@ -14,6 +15,7 @@ export const assetTypeIcons = {
   prop: Package,
   style: Palette,
   footage: Film,
+  image: Images,
   audio: AudioLines,
 };
 export function AssetTypePicker({ onChoose }) {

@@ -73,7 +73,7 @@ export function createCatalogService({
       const old = await read(provider),
         checkedAt = Date.now();
       try {
-        let models,
+        let models, textModels,
           fetchedAt,
           accessPermitted = true;
         if (provider === "venice") {
@@ -100,12 +100,19 @@ export function createCatalogService({
           };
           models = catalog.models;
           fetchedAt = catalog.fetchedAt;
+          // One verified Venice key can serve both writing and media.
+          // An unavailable text catalog must not discard a working media connection.
+          try {
+            const textResponse=await transport("https://api.venice.ai/api/v1/models?type=text",{headers:{Authorization:"Bearer "+key}});
+            if(textResponse.ok){const body=await textResponse.json();if(Array.isArray(body.data))textModels=body.data.filter(m=>!m.model_spec?.offline).map(m=>({id:m.id,name:m.model_spec?.name||m.id,vision:!!m.model_spec?.capabilities?.supportsVision,pricing:m.model_spec?.pricing||null}));}
+          } catch {}
         } else {
           const catalog = await discover(key, transport);
           models = catalog.models;
           fetchedAt = catalog.fetchedAt;
         }
         await credential.commitVerified(key, expectedKey, async () => {
+          if(textModels)await write(path.join(data,"venice-text-models.json"),{models:textModels,fetchedAt});
           await write(
             path.join(
               data,

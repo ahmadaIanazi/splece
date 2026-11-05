@@ -1,3 +1,7 @@
+import { selectableLooks } from "../shared/look-selection.mjs";
+import { routedTextConfig, sendRoutedText } from "./ai-routing.mjs";
+import {textEndpoints,textRequest} from "../shared/ai-routing.mjs";
+import { preserveVideoSoundSection } from "../shared/video-sound.mjs";
 import { hasComposerWriting } from "../shared/composer-sequence.mjs";
 import { applyWorkflowRequest } from "../shared/workflows.mjs";
 import { buildOptimizerRequest, optimizerEstimate } from "./prompt-optimizer.mjs";
@@ -77,8 +81,10 @@ export function createVeniceSettings(data, provider = "venice") {
     },
   };
 }
-export const createDeepSeekSettings = (data) =>
-  createVeniceSettings(data, "deepseek");
+export const createDeepSeekSettings = (data) => {
+ const legacy=createVeniceSettings(data,'deepseek');
+ return {...legacy,config:()=>routedTextConfig(data),async key(){return credentials(data,(await this.config()).provider).key();},async status(){return {...await this.config(),hasKey:!!await this.key()};}};
+};
 export async function discoverDeepSeekModels(
   key,
   transport = providerTransport({ demo: false, timeoutMs: 15000 }),
@@ -128,7 +134,7 @@ export async function requestSmart(
   config,
   key,
   transport = providerTransport({
-    demo: !["venice", "deepseek"].includes(config.mode),
+    demo: config.mode === "demo",
     timeoutMs: 120000,
   }),
   onUsage = () => {},
@@ -179,7 +185,7 @@ export async function requestSmart(
   const provider =
     config.provider === "deepseek" || config.mode === "deepseek"
       ? "DeepSeek"
-      : "Venice";
+      : config.provider || "Venice";
   if (!key)
     throw new Error(`Add your ${provider} API key in Studio settings first.`);
   const contract =
@@ -271,21 +277,18 @@ export async function requestSmart(
     ];
   }
   if (input.operation === "optimize-writing") {
-    if (provider !== "DeepSeek") throw Error("Prompt optimization uses the configured DeepSeek connection.");
     Object.assign(request, buildOptimizerRequest(input, config));
   }
   if (input.operation !== "optimize-writing") applyWorkflowRequest(request, input.projectContext?.settings || input.workflowSettings, "writing");
   const response = await transport(
-    provider === "DeepSeek"
-      ? "https://api.deepseek.com/chat/completions"
-      : "https://api.venice.ai/api/v1/chat/completions",
+    (textEndpoints[config.provider || config.mode] || textEndpoints.venice) + "/chat/completions",
     {
       method: "POST",
       headers: {
         Authorization: "Bearer " + key,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify(textRequest(config,request)),
     },
   );
   if (!response.ok)
@@ -354,17 +357,13 @@ export function installSmartRoutes(
     j.state = "running";
     save(j);
     try {
-      if (j.input.operation === "optimize-writing" && j.config.mode === "deepseek" && (await studioMode(data)) === "test")
+      if (j.config.mode !== "demo" && (await studioMode(data,"text")) === "test")
         throw Error("Offline mode blocked Online prompt optimization. No inference was submitted.");
       const result = await requestSmart(
         j.input,
         j.config,
-        await (
-          j.config.provider === "deepseek" || j.config.mode === "deepseek"
-            ? textSettings
-            : settings
-        ).key(),
-        undefined,
+        await credentials(data,j.config.provider || j.config.mode).key(),
+        (url,options)=>sendRoutedText(data,j.config,JSON.parse(options.body),providerTransport({demo:false,timeoutMs:120000})),
         (receipt) => {
           j.billing = receipt;
           save(j);
@@ -374,6 +373,7 @@ export function installSmartRoutes(
         const candidate = structuredClone(j.input.draft);
         for (const scene of candidate.scenes)
           scene.text = result.proposal.scenes.find(s => s.id === scene.id).text;
+        preserveVideoSoundSection(candidate, j.input.compiled);
         const final = compilePrompt(j.input.projectContext, candidate, j.input.videoCapabilities);
         if (final.text.length > j.input.limit)
           throw Error("The optimized writing plus locked injections exceeds this video model's prompt limit. Your original is unchanged. Shorten optional context before trying again.");
@@ -423,7 +423,7 @@ export function installSmartRoutes(
       Date.now() - cached.fetchedAt < 86400000
     )
       return res.json(cached);
-    const key = await textSettings.key();
+    const key = await credentials(data,"deepseek").key();
     if (!key && !req.query.refresh)
       return res.json({
         models: [],
@@ -509,7 +509,7 @@ export function installSmartRoutes(
   async function optimizerConfig(textModel) {
     const config = await textSettings.config();
     let cached = { models: [] };
-    try { cached = JSON.parse(await fs.readFile(path.join(data, "deepseek-text-models.json"), "utf8")); } catch (e) { if (e.code !== "ENOENT") throw e; }
+    try { cached = JSON.parse(await fs.readFile(path.join(data, `${config.provider}-text-models.json`), "utf8")); } catch (e) { if (e.code !== "ENOENT") throw e; }
     if (textModel && textModel !== config.model) {
       const selected = cached.models?.find(m => m.id === textModel);
       if (!selected) throw Error("Choose a saved available text model in Connections before optimizing.");
@@ -608,7 +608,7 @@ export function installSmartRoutes(
       storyContext: storyContext(p, draft),
       library: p.assets
         .filter((a) => a.kind !== "footage")
-        .map(({ history, ...a }) => a),
+        .map(({ history, ...a }) => ({ ...a, variants: selectableLooks(a).filter(v => v.id !== "none") })),
     };
     let config = await textSettings.config();
     if (req.body.operation === "optimize-writing") {
@@ -621,7 +621,7 @@ export function installSmartRoutes(
       input.optimization = { ...input.optimization, textModel: config.model };
     }
 
-    if (config.mode === "deepseek" && !(await textSettings.key()))
+    if (config.mode !== "demo" && !(await textSettings.key()))
       throw new Error("Save a DeepSeek API key first.");
     if (input.submissionOnly) {
       const ready = all().find(j => j.projectId === p.id && j.draftId === original.id &&

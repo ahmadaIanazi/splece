@@ -5,7 +5,7 @@ import { comparisonChoices } from "../shared/take-comparison.mjs";
 import { run, probe } from "./media.mjs";
 
 export async function renderComparison(sides, output) {
-  const metadata = await Promise.all(sides.map((s) => probe(s.path)));
+  const metadata = await Promise.all(sides.map((s) => s.kind === "image" ? { duration: s.duration, audio: false } : probe(s.path)));
   const duration = Math.min(
     60,
     ...sides.map((s, i) => Math.min(s.duration, metadata[i].duration - s.in)),
@@ -22,6 +22,7 @@ export async function renderComparison(sides, output) {
     args.push(
       "-threads",
       "2",
+      ...(side.kind === "image" ? ["-loop", "1"] : []),
       "-ss",
       String(side.in),
       "-t",
@@ -104,7 +105,7 @@ export async function renderComparison(sides, output) {
 }
 export function installComparisonRoutes(
   app,
-  { store, data, render = renderComparison },
+  { store, data, effects, render = renderComparison },
 ) {
   const root = path.join(data, "comparison-cache"),
     tasks = new Map();
@@ -131,13 +132,20 @@ export function installComparisonRoutes(
     const p = store.get(req.params.id)?.project;
     if (!p) return res.status(404).json({ error: "Project not found." });
     const choices = comparisonChoices(p);
-    const sides = [req.body.a, req.body.b].map((key) =>
+    let sides = [req.body.a, req.body.b].map((key) =>
       choices.find((c) => c.key === key),
     );
+    const effect = req.body.effectJobId && effects?.get(p.id, req.body.effectJobId);
+    if (effect?.state === "ready") {
+      const source = effect.input.source;
+      const voice = p.audioClips?.find(a => a.id === source.lipSync?.audioId);
+      sides = [{ mediaId: source.mediaId, in: source.in, duration: source.duration, kind: source.kind, path: effect.stages[0].snapshot }, { mediaId: effect.media.id, in: 0, duration: source.duration }];
+      if (voice) for (const side of sides) side.voice = { mediaId: voice.mediaId, in: (voice.in || 0) + (source.start || 0) - voice.start };
+    }
     if (sides.some((s) => !s))
       return res.status(400).json({ error: "Choose two available takes." });
     for (const s of sides) {
-      s.path = store.media(s.mediaId)?.path;
+      s.path ||= store.media(s.mediaId)?.path;
       if (!s.path) throw Error("Comparison source is unavailable.");
       if (s.voice) {
         s.voicePath = store.media(s.voice.mediaId)?.path;

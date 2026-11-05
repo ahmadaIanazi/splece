@@ -36,7 +36,20 @@ export function assetImageDraftSignature(asset) {
     asset.description || "",
     asset.variant || "",
     asset.visualBrief || {},
+    asset.characterProfile || {},
     asset.media?.id || "",
     asset.variants || [],
   ]);
+}
+
+// Refresh asynchronous descriptions/media while leaving locally edited fields alone.
+export function refreshAssetEdit(before, local, incoming) {
+  if (!incoming || incoming.id !== local?.id) return local;
+  const next = {...local};
+  for (const key of new Set([...Object.keys(before || {}), ...Object.keys(incoming)])) {
+    if (key === "id" || JSON.stringify(local[key]) !== JSON.stringify(before?.[key])) continue;
+    if (incoming[key] === undefined) delete next[key];
+    else next[key] = structuredClone(incoming[key]);
+  }
+  return next;
 }

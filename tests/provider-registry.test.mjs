@@ -65,7 +65,7 @@ test("Provider credentials reuse legacy files and never appear in connection res
   assert.equal(await registry.credentials("deepseek").key(), "fake-deepseek");
   await registry.credentials("fal").saveKey("fake-fal");
   assert.equal(await createDeepSeekSettings(data).key(), "fake-deepseek");
-  assert.equal((await registry.connections()).length, 3);
+  assert.equal((await registry.connections()).length, 6);
   assert.ok(!JSON.stringify(await registry.connections()).includes("fake-"));
   await assert.rejects(
     registry.credentials("fal").saveKey("Bearer invalid"),

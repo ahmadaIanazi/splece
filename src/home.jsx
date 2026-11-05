@@ -47,8 +47,8 @@ const guides = [
     description: "From a new project to your first cut.",
     steps: [
       "Create a project and give it a name. Splece keeps its media, generation records and exports together in a local folder.",
-      "In Structure, choose the format and outline your idea. Develop chapters, scenes and the individual generations within them.",
-      "Open a generation in the video composer, or use + in the prompt sidebar to start from scratch.",
+      "Open Plan in the main sidebar to shape your idea with chat. Your scenes and clips appear below, with the preview always beside you. You can also start in a blank studio.",
+      "Click a planning card to open its composer, or choose Composer in the sidebar to start from scratch. Return to Plan whenever you want to reshape the story.",
       "Choose references and settings, review the prepared prompt, then generate. Use Offline mode while learning; it does not spend AI credits.",
     ],
   },
@@ -338,7 +338,7 @@ export function HomeScreen({
                   templates: "Templates",
                   learn: "Learn",
                   settings: "Settings",
-                  connections: "AI connections",
+                  connections: "Connections",
                   about: "About Splece",
                 }[page]
               }
@@ -643,7 +643,7 @@ export function HomeScreen({
                 <button onClick={() => navigate("connections")}>
                   <Plug size={22} />
                   <span>
-                    <b>AI connections</b>
+                    <b>Connections</b>
                     <small>Manage your providers and API keys.</small>
                   </span>
                   <ArrowRight size={17} />
@@ -761,7 +761,7 @@ export function HomeScreen({
                   </div>
                 </dl>
                 <p><a href="https://github.com/ahmadaIanazi" target="_blank" rel="noreferrer">Created by Ahmad Alanazi · @ahmadaIanazi ↗</a></p>
-                <p>Public repository: <strong>ahmadaIanazi/splece</strong> · preparing for release.</p>
+                <p><a href="https://github.com/ahmadaIanazi/splece" target="_blank" rel="noreferrer">Source code · ahmadaIanazi/splece ↗</a></p>
                 <span className="home-about-version">Splece · {version}</span>
               </div>
             )}

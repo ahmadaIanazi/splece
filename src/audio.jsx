@@ -1,3 +1,4 @@
+import { clipAudioGain, clipVolumePatch, toggleClipAudio } from "../shared/clip-audio.mjs";
 import { soundtrackChanges } from "../shared/soundtrack.mjs";
 import { MemoryLRU } from "../shared/preview-window.mjs";
 import React, {
@@ -125,14 +126,14 @@ export const Waveform = memo(function Waveform({
     </svg>
   );
 });
-export function ClipAudioShape({ clip, media, sourceIn, onChange }) {
+export function ClipAudioShape({ clip, media, sourceIn, onChange, label = "Clip audio volume" }) {
   const [preview, setPreview] = useState(null),
     [open, setOpen] = useState(false);
   const cleanup = useRef(null),
     dragged = useRef(false);
   useEffect(() => () => cleanup.current?.(), []);
-  const gain = preview ?? (clip.mute ? 0 : (clip.volume ?? 1));
-  const commit = (volume) => onChange({ volume, mute: volume === 0 });
+  const gain = preview ?? clipAudioGain(clip);
+  const commit = (volume) => onChange(clipVolumePatch(volume));
   function begin(e) {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -179,7 +180,7 @@ export function ClipAudioShape({ clip, media, sourceIn, onChange }) {
       <div
         role="slider"
         tabIndex={0}
-        aria-label="Clip audio volume"
+        aria-label={label}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(gain * 100)}
@@ -228,6 +229,8 @@ export function ClipAudioShape({ clip, media, sourceIn, onChange }) {
           }
         }}
       >
+        <span className="clip-volume-baseline" aria-hidden="true" />
+        {gain === 0 && <VolumeX className="clip-volume-muted-icon" size={12} aria-hidden="true" />}
         <Waveform
           mediaId={media.id}
           sourceIn={sourceIn}
@@ -242,7 +245,7 @@ export function ClipAudioShape({ clip, media, sourceIn, onChange }) {
           <button
             aria-label={gain ? "Mute clip audio" : "Unmute clip audio"}
             onClick={() =>
-              onChange({ mute: !clip.mute, volume: clip.volume || 1 })
+              onChange(toggleClipAudio(clip))
             }
           >
             {gain ? <Volume2 size={12} /> : <VolumeX size={12} />}
@@ -255,6 +258,41 @@ export function ClipAudioShape({ clip, media, sourceIn, onChange }) {
     </div>
   );
 }
+export function ClipSoundControls({ record, label, onChange }) {
+  const [draft, setDraft] = useState(null);
+  const pending = useRef(null);
+  const gain = draft ?? clipAudioGain(record);
+  const finish = () => {
+    if (pending.current !== null) onChange(clipVolumePatch(pending.current));
+    pending.current = null;
+    setDraft(null);
+  };
+  return (
+    <div className="clip-inspector-volume">
+      <button
+        aria-label={gain > 0 ? "Mute clip sound" : "Unmute clip sound"}
+        aria-pressed={gain === 0}
+        title={gain > 0 ? "Mute" : "Unmute"}
+        onClick={() => onChange(toggleClipAudio(record))}
+      >
+        {gain > 0 ? <Volume2 size={17} /> : <VolumeX size={17} />}
+      </button>
+      <input type="range" min="0" max="1" step="0.01"
+        aria-label={label} aria-valuetext={`${Math.round(gain * 100)} percent`}
+        value={gain}
+        onChange={event => { pending.current = +event.target.value; setDraft(pending.current); }}
+        onPointerUp={finish} onKeyUp={finish} onBlur={finish}
+        onPointerCancel={() => { pending.current = null; setDraft(null); }}
+        onKeyDown={event => {
+          event.stopPropagation();
+          if (event.key === "Escape") { pending.current = null; setDraft(null); }
+        }}
+      />
+      <output>{Math.round(gain * 100)}%</output>
+    </div>
+  );
+}
+
 export function AudioPlayback({
   clips,
   time,

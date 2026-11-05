@@ -1,3 +1,4 @@
+import { selectableLooks, lookMedia } from "./look-selection.mjs";
 import { timelineDirectionSignature } from "./timeline-direction.mjs";
 import { bindReferencePrompt } from "./references.mjs";
 import {
@@ -129,16 +130,13 @@ export function normalizeSmartProposal(value, input) {
     seen.add(asset.id);
     if (
       decision.variantId &&
-      !asset.variants?.some((v) => v.id === decision.variantId)
+      !selectableLooks(asset).some((v) => v.id === decision.variantId)
     )
       throw new Error("The model chose an unknown appearance variant.");
     if (input.videoCapabilities?.referenceMode === "flat") {
       const current = input.compiled.references.find((r) => r.id === asset.id),
-        variant = asset.variants?.find((v) => v.id === decision.variantId);
-      const media = [
-        variant?.media || asset.media,
-        ...(variant ? variant.mediaList || [] : asset.mediaList || []),
-      ].filter(Boolean);
+        variant = selectableLooks(asset).find((v) => v.id === decision.variantId);
+      const media = lookMedia(asset, variant);
       const nextCount = new Set(media.map((m) => m.id)).size;
       if (
         current &&
@@ -188,13 +186,8 @@ export function normalizeSmartProposal(value, input) {
   decisions.sort((a, b) => order.indexOf(a.assetId) - order.indexOf(b.assetId));
   const references = decisions.map((c) => {
     const asset = input.library.find((a) => a.id === c.assetId),
-      variant = asset.variants?.find((v) => v.id === c.variantId);
-    const media = [
-      variant?.media || asset.media,
-      ...(variant ? variant.mediaList || [] : asset.mediaList || []),
-    ]
-      .filter(Boolean)
-      .filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
+      variant = selectableLooks(asset).find((v) => v.id === c.variantId);
+    const media = lookMedia(asset, variant);
     return {
       ...asset,
       targetName: input.library.find(a => a.id === input.draft.referenceOptions?.[asset.id]?.targetAssetId)?.name || "",
@@ -267,7 +260,9 @@ export function importedAsset(
     kind:
       media.kind === "audio"
         ? "audio"
-        : ["character", "location", "prop", "style", "footage"].includes(kind)
+        : media.kind === "image" && kind === "footage"
+          ? "image"
+        : ["character", "location", "prop", "style", "footage", "image"].includes(kind)
           ? kind
           : "footage",
     description: "",

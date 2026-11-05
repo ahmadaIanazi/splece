@@ -1,0 +1,180 @@
+.addon-settings,
+.local-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.addon-settings header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.addon-settings h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.addon-settings p,
+.local-tools p {
+  line-height: 1.5;
+  color: var(--splece-text-secondary);
+  margin: 8px 0;
+}
+.addon-card {
+  padding: 20px;
+  border: 1px solid var(--splece-border-control);
+  border-radius: var(--splece-radius-card);
+  background: var(--splece-surface-panel);
+}
+.addon-heading,
+.addon-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.addon-heading {
+  justify-content: space-between;
+}
+.addon-heading strong {
+  font-weight: 600;
+}
+.addon-heading span,
+.addon-card small {
+  font-size: 12px;
+  color: var(--splece-text-secondary);
+}
+.addon-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  min-height: 32px;
+  overflow-wrap: anywhere;
+}
+.addon-actions {
+  margin-top: 8px;
+}
+.addon-actions button {
+  min-height: 44px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+.addon-actions a {
+  margin-left: auto;
+  color: var(--splece-accent-active);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.addon-card details {
+  margin-top: 12px;
+  color: var(--splece-text-secondary);
+  font-size: 12px;
+}
+.addon-card summary,
+.local-tools summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.addon-remove {
+  border-top: 1px solid var(--splece-border-control);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+.addon-remove button {
+  margin-inline-end: 8px;
+}
+.local-tools {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--splece-border-control);
+}
+.local-tools label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.local-tools select,
+.local-tools input {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+}
+.local-caption {
+  margin-block: 12px;
+}
+.local-caption textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.local-caption button {
+  align-self: flex-start;
+  min-height: 44px;
+}
+.local-tools-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.local-tools-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.local-result {
+  background: var(--splece-surface-recessed);
+  border-radius: var(--splece-radius-control);
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.local-result small {
+  display: block;
+  color: var(--splece-text-secondary);
+}
+.local-result pre {
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 12px;
+}
+.local-result audio {
+  width: 100%;
+  height: 36px;
+  margin: 8px 0;
+}
+.local-result button {
+  margin: 4px 6px 4px 0;
+}
+.local-result a {
+  color: var(--splece-accent-active);
+}
+.local-tools [role="alert"] {
+  color: var(--splece-text-primary);
+  border-inline-start: 2px solid var(--splece-accent-active);
+  padding-inline-start: 12px;
+}
+.soundtrack-generation-tools[hidden],
+.soundtrack-action-bar[hidden] {
+  display: none;
+}
+.soundtrack-generation-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.local-tools .addon-settings {
+  max-height: 450px;
+  overflow: auto;
+  padding: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .addon-settings .spin,
+  .local-tools .spin {
+    animation: none;
+  }
+}

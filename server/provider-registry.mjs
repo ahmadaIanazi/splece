@@ -9,6 +9,7 @@ import {
 } from "./connections.mjs";
 import { providerDefinitions, providerId } from "../shared/providers.mjs";
 import { VeniceAdapter } from "./providers.mjs";
+import { XaiAdapter } from "./adapters/xai.mjs";
 import { FalAdapter } from "./adapters/fal.mjs";
 import { providerTransport } from "./security.mjs";
 import { studioMode } from "./mode.mjs";
@@ -19,6 +20,7 @@ export function createProviderRegistry({
   const factories = {
     venice: (options) => new VeniceAdapter(options),
     fal: (options) => new FalAdapter(options),
+    xai: (options) => new XaiAdapter(options),
   };
   const registry = {
     definitions: providerDefinitions,
@@ -34,7 +36,7 @@ export function createProviderRegistry({
       return factories[id]({
         key,
         transport,
-        allowSubmit: async () => (await studioMode(data)) === "live",
+        allowSubmit: async () => (await studioMode(data, "video")) === "live",
       });
     },
     async catalog(id) {
@@ -51,7 +53,7 @@ export function createProviderRegistry({
             checkedAt: saved.checkedAt,
             error: saved.error,
             models: saved.models || [],
-            balanceSupport: p.id === "fal" ? "unavailable" : "available",
+            balanceSupport: ["fal", "xai"].includes(p.id) ? "unavailable" : "available",
           };
         }),
       );
@@ -115,6 +117,65 @@ export function createProviderRegistry({
         };
       }
     },
+    async discoverXai(candidate) {
+      const credential = credentials(data, "xai"),
+        expectedKey = await credential.key();
+      const key =
+        candidate === undefined ? expectedKey : validateAPIKey(candidate);
+      const replacing = key !== expectedKey;
+      if (!key) throw Error("Add your xAI API key first.");
+      const old = await registry.catalog("xai"),
+        checkedAt = Date.now();
+      try {
+        const result = await new XaiAdapter({ key, transport }).catalog();
+        await credential.commitVerified(key, expectedKey, () =>
+          writeJSON(path.join(data, "xai-connection.json"), {
+            ...result,
+            ok: true,
+            checkedAt,
+            keyHash: keyFingerprint(key),
+            accessPermitted: true,
+          }),
+        );
+        return {
+          ...result,
+          ok: true,
+          testOk: true,
+          keySaved: candidate !== undefined,
+          ...connectionState(key, {
+            ok: true,
+            keyHash: keyFingerprint(key),
+            accessPermitted: true,
+          }),
+          message: `Connected. ${result.models.length} video workflows and ${result.imageModelIds.length} image models saved. No generation was requested.`,
+        };
+      } catch (e) {
+        if (!replacing)
+          await credential
+            .recordCheck(expectedKey, () =>
+              writeJSON(path.join(data, "xai-connection.json"), {
+                ...old,
+                ok: false,
+                checkedAt,
+                keyHash: keyFingerprint(key),
+                error: e.message,
+              }),
+            )
+            .catch(() => {});
+        const { keyHash, ...publicCatalog } = old;
+        return {
+          ...publicCatalog,
+          testOk: false,
+          keySaved: false,
+          ...connectionState(
+            await credential.key(),
+            await registry.catalog("xai"),
+          ),
+          ok: false,
+          message: e.message,
+        };
+      }
+    },
   };
   return registry;
 }
@@ -141,6 +202,7 @@ export function installConnectionRoutes(app, registry, data) {
       throw Error("Paste only your API key.");
     res.json(await registry.discoverFal(req.body.key));
   });
+  app.post("/api/providers/xai/test", async (req, res) => res.json(await registry.discoverXai(req.body.key)));
   app.put("/api/onboarding", async (req, res) => {
     const value = {
       version: 1,

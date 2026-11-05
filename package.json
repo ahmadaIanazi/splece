@@ -1,11 +1,11 @@
 {
   "name": "local-video-studio",
-  "version": "0.1.4",
+  "version": "0.1.5-beta.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node server/index.mjs",
-    "build": "vite build",
+    "build": "node scripts/build-interface.mjs",
     "build:website": "node scripts/website/build.mjs",
     "start": "NODE_ENV=production node server/index.mjs",
     "studio": "node scripts/studio-launcher.mjs open",
@@ -40,5 +40,12 @@
   },
   "license": "Apache-2.0",
   "author": "Ahmad Alanazi",
-  "homepage": "https://www.splece.com"
+  "homepage": "https://www.splece.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmadaIanazi/splece.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ahmadaIanazi/splece/issues"
+  }
 }

@@ -35,3 +35,22 @@ This release uses Microsoft.NETCore.App.Runtime.win-x64 8.0.32 and Microsoft.Win
 - https://www.splece.com/legal/VELOPACK-LICENSE.txt
 
 Copies are preserved in packaging/licenses for subsequent package builds. Verify versions again whenever the native runtime changes.
+
+## User-installed local add-ons
+
+These engines and model weights are **not bundled** with Splece. Users choose whether to download them into the separate local add-ons directory. Upstream notices remain in each installed environment/source checkout.
+
+| Optional component | Role | Upstream license/source |
+|---|---|---|
+| Earshot | Audio analysis and sound ranking | MIT · https://github.com/Leonxlnx/earshot |
+| CLAP / AST weights | Earshot's optional local models | Apache-2.0 / BSD-3-Clause, respectively; see Earshot's pinned model definitions and model cards |
+| librosa | Beat and onset analysis | ISC · https://github.com/librosa/librosa |
+| PySceneDetect | Shot detection | BSD-3-Clause · https://github.com/Breakthrough/PySceneDetect |
+| whisper.cpp | Local speech transcription | MIT · https://github.com/ggml-org/whisper.cpp |
+| Openverse results | Optional online recording discovery | Each imported recording keeps its own license, creator and source. No stock recordings are bundled. https://openverse.org/ |
+
+Optional Python runtime dependencies retain their own licenses. The native editable sound builder is original Splece code; Real SFX is a workflow reference, not vendored code. Implementation, version pins, limitations and verification are described in `docs/local-addons.md`.
+
+## Provider setup documentation screenshots
+
+The connection guide includes instructional screenshots of public OpenAI and Venice documentation. These are attributed reference material, not Splece-authored interface designs or licensed application code. Rights remain with the respective providers. Source links and capture details are in `public/connection-guides/README.md`; no account or credential data is included.

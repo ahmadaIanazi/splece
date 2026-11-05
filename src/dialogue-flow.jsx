@@ -38,7 +38,7 @@ export function DialogueFlow({
 }) {
   const speaking = project.clips.filter(
     (c) => (!clipIds || clipIds.includes(c.id)) && dialogueScript(project, c).length,
-  );
+  ).sort((a,b)=>a.start-b.start);
   const selected = project.clips.filter((c) => selectedIds.includes(c.id));
   const clip = selected.length === 1 ? selected[0] : null;
   return (
@@ -91,6 +91,8 @@ export function DialogueFlow({
                       ? "Applied"
                       : lipSyncActive(job || {})
                         ? "Matching lips"
+                        : job?.state === "ready" && hasVoice && job.input.audioMediaId===latestVoice.mediaId
+                          ? "Ready to compare"
                         : hasVoice
                           ? "Voice ready"
                           : "Needs voice"}

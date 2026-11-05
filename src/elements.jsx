@@ -1,3 +1,5 @@
+import { ClipSoundControls } from "./audio.jsx";
+import { clipAudioTarget, patchClipAudio } from "../shared/clip-audio.mjs";
 import {
   mediaPose,
   mediaAnimation,
@@ -7,7 +9,7 @@ import {
   mediaMotionPresets,
   mediaVisualKind,
 } from "../shared/media-animation.mjs";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Type,
   Square,
@@ -187,6 +189,11 @@ export function useElementsEditor({ project, update, time, onSeek, onOpen }) {
       );
     },
     patch: patchRecord,
+    patchSound(patch) {
+      if (target?.type !== "media" || !item) return;
+      session.current.finish();
+      update(p => patchClipAudio(p, item.id, patch));
+    },
     pose(patch) {
       if (!item) return;
       const current = session.current.value(item, target.type);
@@ -388,15 +395,29 @@ function ElementColor({ editor, element }) {
     </div>
   );
 }
-function ElementText({ editor, value, onFinish, ...props }) {
+function ElementText({ editor, value, onFinish, inline = false, ...props }) {
   const [draft, setDraft] = useState(value),
-    focused = useRef(false);
+    focused = useRef(false),
+    input = useRef(null);
+  useLayoutEffect(() => {
+    if (!inline || !input.current) return;
+    const field = input.current;
+    const fit = () => {
+      field.style.height = "0px";
+      field.style.height = `${field.scrollHeight}px`;
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(field.parentElement);
+    return () => observer.disconnect();
+  }, [draft, inline, props.style]);
   useEffect(() => {
     if (!focused.current) setDraft(value);
   }, [value]);
   return (
     <textarea
       {...props}
+      ref={input}
       value={draft}
       maxLength={2000}
       onFocus={() => {
@@ -518,7 +539,7 @@ export function ElementsPreview({ editor, ratio, soloId }) {
       <div
         className="elements-art"
         dangerouslySetInnerHTML={{
-          __html: elementsSVG(soloId ? editor.items.filter(e=>e.id===soloId) : editor.items, editor.time, width, height),
+          __html: elementsSVG(editor.items.filter(e => (!soloId || e.id === soloId) && !(textEdit === item?.id && e.id === textEdit)), editor.time, width, height),
         }}
       />
       {visible.map((e) => {
@@ -612,60 +633,39 @@ export function ElementsPreview({ editor, ratio, soloId }) {
               onPointerUp={end}
               onPointerCancel={(ev) => end(ev, true)}
             />
-            <div
-              className="media-canvas-controls"
-              onPointerDown={() => editor.seek(editor.time)}
-            >
-              <label>
-                Rotate
-                <GestureRange
-                  editor={editor}
-                  label="Preview rotation"
-                  field="rotation"
-                  min="-180"
-                  max="180"
-                  value={pose.rotation}
-                />
-              </label>
-              <label>
-                Opacity
-                <GestureRange
-                  editor={editor}
-                  label="Preview opacity"
-                  field="opacity"
-                  min="0"
-                  max="1"
-                  step=".01"
-                  value={pose.opacity}
-                />
-              </label>
-              <button
-                aria-label={`Add or remove ${mediaLabel} keyframe`}
-                aria-pressed={mediaAnimation(item).keyframes.some(
-                  (k) => Math.abs(k.t - (editor.time - item.start)) < 0.025,
-                )}
-                title="Keyframe at playhead"
-                onClick={() => editor.keyframe()}
-              >
-                <Diamond size={16} />
-              </button>
-            </div>
+
           </>
         )}
-      {textEdit === item?.id && (
-        <ElementText
-          editor={editor}
-          value={item.text}
-          autoFocus
-          aria-label="Edit text on preview"
-          className="element-inline-text"
-          dir="auto"
+      {textEdit === item?.id && visible.some(e => e.id === textEdit) && (
+        <div
+          className="element-inline-editor"
           style={{
-            left: `${clamp(pose.x - pose.w / 2, 0, 0.7) * 100}%`,
-            top: `${clamp(pose.y - pose.h / 2, 0, 0.7) * 100}%`,
+            left: `${(pose.x - pose.w / 2) * 100}%`,
+            top: `${(pose.y - pose.h / 2) * 100}%`,
+            width: `${pose.w * 100}%`,
+            height: `${pose.h * 100}%`,
+            transform: `rotate(${pose.rotation}deg)`,
+            opacity: pose.opacity,
+            color: item.color,
+            fontFamily: item.font,
+            fontWeight: item.weight,
+            fontSize: `${item.fontSize * 100}cqh`,
+            textAlign: item.align,
           }}
-          onFinish={() => setTextEdit(null)}
-        />
+        >
+          <ElementText
+            key={item.id}
+            editor={editor}
+            value={item.text}
+            inline
+            autoFocus
+            spellCheck={false}
+            aria-label="Edit text on preview"
+            className="element-inline-text"
+            dir="auto"
+            onFinish={() => setTextEdit(null)}
+          />
+        </div>
       )}
     </div>
   );
@@ -717,6 +717,7 @@ export function ElementsInspector({ editor, onRemoveMedia, onMediaSettings }) {
   const e = editor.item,
     media = editor.target.type === "media";
   const image = media && mediaVisualKind(e, editor.project) === "image";
+  const sound = media && e ? clipAudioTarget(editor.project, e) : null;
   const pose = e
     ? media
       ? mediaPose(e, editor.time)
@@ -841,6 +842,15 @@ export function ElementsInspector({ editor, onRemoveMedia, onMediaSettings }) {
         </div>
       ) : (
         <>
+          {media && !image && (
+            <section className="element-section" aria-label="Clip sound">
+              <div className="element-section-title">{sound?.linked ? "Dialogue" : "Sound"}</div>
+              {sound ? (
+                <ClipSoundControls key={sound.record.id} record={sound.record}
+                  label={sound.label} onChange={editor.patchSound} />
+              ) : <small>No audio in this take</small>}
+            </section>
+          )}
           {media && (
             <div className="media-motion-presets" aria-label="Motion presets">
               {mediaMotionPresets.map((p) => (
@@ -892,10 +902,10 @@ export function ElementsInspector({ editor, onRemoveMedia, onMediaSettings }) {
                   </select>
                 </label>
                 <label>
-                  Size
+                  Size (% of frame)
                   <GestureNumber
                     editor={editor}
-                    label="Text size"
+                    label="Text size (% of frame height)"
                     min="1"
                     max="50"
                     step=".5"
@@ -972,6 +982,7 @@ export function ElementsInspector({ editor, onRemoveMedia, onMediaSettings }) {
                 ))}
               </div>
             )}
+            <details className="element-precision"><summary>Precise position & size</summary>
             <div className="element-pair">
               {["x", "y", "w", "h"].map((key) => (
                 <label key={key}>
@@ -1000,6 +1011,7 @@ export function ElementsInspector({ editor, onRemoveMedia, onMediaSettings }) {
                 </label>
               ))}
             </div>
+            </details>
             <label>
               <span className="element-value-label">
                 Rotation<output>{Math.round(pose.rotation)}°</output>
@@ -1227,23 +1239,10 @@ export function ElementsTimeline({ editor, zoom, focused, onFocusItem }) {
     >
       <div className="elements-timeline-heading">
         <span>Elements</span>
-        {elementKinds.map((kind) => {
-          const Icon = icons[kind];
-          return (
-            <button
-              key={kind}
-              aria-label={`Add ${kind} to timeline`}
-              disabled={(editor.project.elements?.length || 0) >= 100}
-              onClick={() => editor.add(kind)}
-            >
-              <Icon size={14} />
-              {focused && kind}
-            </button>
-          );
-        })}
+
       </div>
       {!editor.items.length && focused && (
-        <p>Add a title, a shape or an arrow at the playhead.</p>
+        <p>Use Elements in the tool rail to add text and shapes.</p>
       )}
       {focused &&
         editor.project.clips

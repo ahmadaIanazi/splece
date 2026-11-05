@@ -3,22 +3,12 @@
   max-height: none;
   overflow: visible;
 }
-.editor-shell .timeline-mode-rail {
-  position: absolute;
-  z-index: 12;
-  top: 12px;
-  bottom: 54px;
-  left: 4px;
-  width: 56px;
-  overflow: auto;
-  scrollbar-width: none;
-}
 .editor-shell .timeline-panel[data-timeline-view] .timeline-edit-rail {
   left: auto;
   right: 6px;
 }
 .editor-shell .timeline-panel[data-timeline-view] .timeline-body {
-  margin-left: 68px;
+  margin-left: 12px;
   margin-right: 48px;
 }
 .editor-shell .timeline-view-direction .timeline-edit-rail {
@@ -65,16 +55,7 @@
 .editor-shell .timeline-view-direction .timeline-content > .ruler {
   margin-top: auto;
 }
-.editor-shell.assets-expanded .timeline-mode-rail {
-  bottom: 4px;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .timeline-mode-rail button {
-    transition:
-      color 140ms,
-      background 140ms;
-  }
-}
+
 
 .editor-shell
   .timeline-view-direction

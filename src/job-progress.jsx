@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { jobProgress } from "../shared/job-progress.mjs";
-export function JobProgress({ job, compact = false, inline = false }) {
+import { GenerationSurface } from "./generation-surface";
+export function JobProgress({ job, compact = false, inline = false, surface, title, count }) {
   const [now, setNow] = useState(Date.now());
   const terminal = jobProgress(job).terminal;
   useEffect(() => {
@@ -9,6 +10,7 @@ export function JobProgress({ job, compact = false, inline = false }) {
     return () => clearInterval(timer);
   }, [terminal]);
   const p = jobProgress(job, now);
+  if (surface) return <GenerationSurface job={job} progress={p} surface={surface} title={title} count={count} />;
   return (
     <div
       className={

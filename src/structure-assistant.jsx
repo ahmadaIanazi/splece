@@ -26,7 +26,7 @@ export function StructureAssistant({
   paused = false,
   onOpenAsset,
 }) {
-  const { needsConnection } = useProviderConnection("deepseek", assistant?.status?.mode);
+  const { needsConnection } = useProviderConnection("deepseek", assistant?.status?.mode,"assistant");
   const context = useMemo(
     () => structureAssistantContext(project, nodeId),
     [project, nodeId],
@@ -170,7 +170,7 @@ export function StructureAssistant({
               : "Ideas you choose. Your writing stays yours."}
           </small>
         </div>
-        {needsConnection ? <ConnectProviderButton provider="deepseek" feature="story suggestions" returnLabel="Back to my story" /> : busy ? (
+        {needsConnection ? <ConnectProviderButton lane="assistant" provider="deepseek" feature="story suggestions" returnLabel="Back to my story" /> : busy ? (
           <LoaderCircle
             aria-hidden="true"
             size={17}

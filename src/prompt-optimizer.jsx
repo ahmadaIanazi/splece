@@ -204,8 +204,9 @@ export function usePromptOptimizer({
   };
 }
 
-export function OptimizerStatus({ optimizer, draft, modelName, change }) {
+export function OptimizerStatus({ optimizer, draft, modelName, change, feedbackOnly = false }) {
   const { estimate, busy, error, catalog, profile } = optimizer;
+  if (feedbackOnly && !busy && !error && !(estimate && !estimate.canSubmit)) return null;
   return (
     <div className="prompt-optimizer">
       {busy ? (
@@ -216,10 +217,10 @@ export function OptimizerStatus({ optimizer, draft, modelName, change }) {
             <small>Then video generation · original writing kept</small>
           </span>
         </div>
-      ) : (
+      ) : !feedbackOnly && (
         <details className="optimizer-options">
           <summary>
-            For {modelName} ·{" "}
+            Prompt optimization ·{" "}
             {estimate
               ? estimate.executionMode === "test"
                 ? "Offline · free"

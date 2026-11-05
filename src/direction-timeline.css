@@ -584,4 +584,4 @@
   display: none;
 }
 
-.composer-shell:has(.direction-composer-host) > .composer-pointer { display: none; }
+.composer-shell:has(#workspace-panel-direction:not([hidden])) > .composer-pointer { display: none; }

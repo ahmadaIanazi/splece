@@ -1,3 +1,4 @@
+import {textEndpoints,textRequest} from "../shared/ai-routing.mjs";
 import { usageReceipt } from "../shared/costs.mjs";
 import { parseStoryCompletion } from "../shared/story-contract.mjs";
 
@@ -15,19 +16,19 @@ export async function requestStructuredStory({
   const attempts = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     const response = await transport(
-      "https://api.deepseek.com/beta/chat/completions",
+      (textEndpoints[config.provider || config.mode] || textEndpoints.deepseek) + ((config.provider || config.mode) === "deepseek" ? "/beta/chat/completions" : "/chat/completions"),
       {
         method: "POST",
         headers: {
           Authorization: "Bearer " + key,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify(textRequest(config,request)),
       },
     );
     if (!response.ok)
       throw Error(
-        `DeepSeek returned ${response.status}. No automatic paid retry.`,
+        `${config.provider || "Text provider"} returned ${response.status}. No automatic paid retry.`,
       );
     const data = await response.json();
     attempts.push(usageReceipt(data, config));

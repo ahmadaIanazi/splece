@@ -1,3 +1,4 @@
+import { characterLooks } from "../shared/character-looks.mjs";
 import {
   isProjectOnly,
   needsReferenceApproval,
@@ -11,10 +12,11 @@ import {
 } from "./library-organization";
 import {
   libraryItemKey,
+  libraryAssetKind,
   matchesLibraryItem,
   folderPath,
 } from "../shared/library-organization.mjs";
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import {
   Film,
   UserRound,
@@ -46,23 +48,17 @@ import { tc } from "./state";
 import { useSharedLibrary } from "./shared-library";
 import "./media-library-redesign.css";
 function LibraryThumbnail({ media, name = "", ...props }) {
-  const [failed, setFailed] = useState(false);
-  const src = media?.thumbnail || (media?.kind === "image" ? media.url : null);
-  return src && !failed ? (
-    <img
-      src={src}
-      alt={name}
-      draggable={false}
-      onError={() => setFailed(true)}
-      {...props}
-    />
-  ) : (
-    <Images size={38} />
-  );
+  const [failed, setFailed] = useState(false), [unavailable, setUnavailable] = useState(false);
+  useEffect(() => { setFailed(false); setUnavailable(false); }, [media?.id, media?.thumbnail]);
+  const original = media?.kind === "image" ? (media.id ? `/api/media/${media.id}/original` : media.url) : null;
+  const src = failed ? original : media?.thumbnail || original;
+  return src && !unavailable ? <img src={src} alt={name} draggable={false} onError={() => failed ? setUnavailable(true) : setFailed(true)} {...props}/> : <Images size={38}/>;
 }
+
 const filters = [
-  ["all", "All assets", Images],
+  ["all", "All types", Images],
   ["footage", "Footage", Film],
+  ["image", "Images", Images],
   ["character", "Characters", UserRound],
   ["location", "Locations", MapPin],
   ["prop", "Props", Package],
@@ -76,6 +72,8 @@ export function MediaDock({
   onManage,
   onCreate,
   onEdit,
+  onOpenDetails,
+  onUseStartFrame,
   onDrag,
   onUse,
   onImport,
@@ -85,7 +83,7 @@ export function MediaDock({
   const [filter, setFilter] = useState(initialFilter),
     [query, setQuery] = useState(""),
     [unused, setUnused] = useState(false),
-    [preview, setPreview] = useState(null),
+    [previewSelection, setPreview] = useState(null),
     [folder, setFolder] = useState("all"),
     [favorites, setFavorites] = useState(false),
     [tags, setTags] = useState([]),
@@ -100,7 +98,7 @@ export function MediaDock({
   const items = useMemo(() => {
     const pool = generationPool(project, jobs).map((e) => ({
       ...e,
-      kind: "footage",
+      kind: libraryAssetKind(project.assets.find(a => a.media?.id === e.media.id) || {kind:"footage", media:e.media}),
       ai: !!e.job,
       asset: project.assets.find((a) => a.media?.id === e.media.id),
     }));
@@ -122,7 +120,7 @@ export function MediaDock({
           project.clips.some((c) =>
             c.takes.some((t) => t.id === a.media?.id),
           ) || project.audioClips?.some((c) => c.mediaId === a.media?.id),
-        kind: a.media?.kind === "audio" ? "audio" : a.kind,
+        kind: libraryAssetKind(a),
       }));
     const shared = library.entries.map((entry) => ({
       key: "shared:" + entry.id,
@@ -130,7 +128,7 @@ export function MediaDock({
       asset: entry.asset,
       media: entry.asset.media,
       name: entry.asset.name,
-      kind: entry.asset.media?.kind === "audio" ? "audio" : entry.asset.kind,
+      kind: libraryAssetKind(entry.asset),
       ai: !!entry.asset.generated,
     }));
     return [
@@ -141,6 +139,7 @@ export function MediaDock({
   }, [project, jobs, library.entries]);
   const organized = items.map((item) => ({
     ...item,
+    versionIndex: project.clips.find(c=>c.takes.some(t=>t.id===item.media?.id))?.takes.findIndex(t=>t.id===item.media?.id),
     organizationKey: libraryItemKey(project.id, item),
     organization: organization.forAsset(
       libraryItemKey(project.id, item),
@@ -162,6 +161,9 @@ export function MediaDock({
         organization.folders,
       ),
   );
+  const preview = visible.find(item => item.key === previewSelection?.key) || null;
+  useEffect(() => { setPreview(null); setSelectedKeys([]); selectionAnchor.current = null; }, [filter, scope, folder, favorites, hiddenCollection, query, unused, tags]);
+  const openDetails = item => onOpenDetails ? onOpenDetails(item) : item.asset && onEdit(item.asset.id);
   const allTags = [
     ...new Map(
       scoped
@@ -171,7 +173,7 @@ export function MediaDock({
   ].sort();
   const organize = (id, patch) =>
     organization.organize(id, patch).catch(() => {});
-  const selectedItems = scoped.filter((item) =>
+  const selectedItems = visible.filter((item) =>
     selectedKeys.includes(item.key),
   );
   const selectItem = (item, event = {}) => {
@@ -210,7 +212,7 @@ export function MediaDock({
   return (
     <aside
       className="media-dock library-redesign"
-      aria-label="Media Library"
+      aria-label="Library"
       onKeyDown={(event) => {
         if (
           (event.metaKey || event.ctrlKey) &&
@@ -231,7 +233,7 @@ export function MediaDock({
       <header>
         <div className="library-heading">
           <Images size={20} />
-          <b>Media Library</b>
+          <b>Library</b>
           <div className="library-scope-tabs" aria-label="Library scope">
             {[
               ["project", "This project", Folder],
@@ -271,19 +273,12 @@ export function MediaDock({
           Add asset
         </button>
         <button
-          title="Create or edit an asset"
-          aria-label="Manage asset library"
-          onClick={onManage}
-        >
-          <Settings2 size={16} />
-        </button>
-        <button
-          className="icon"
-          aria-label="Back to editor"
-          title="Back to editor"
+          className="library-return"
+          aria-label="Back to studio"
+          title="Back to studio"
           onClick={onClose}
         >
-          <ChevronDown size={22} />
+          <ChevronDown size={16} /> <span>Back to studio</span>
         </button>
       </header>
       {adding && (
@@ -307,7 +302,7 @@ export function MediaDock({
               const folderId = ["all", "unfiled"].includes(folder)
                 ? null
                 : folder;
-              if (["footage", "audio"].includes(kind)) onImport(kind, folderId);
+              if (["footage", "audio", "image"].includes(kind)) onImport(kind, folderId);
               else onCreate(kind, folderId);
             }}
           />
@@ -324,7 +319,7 @@ export function MediaDock({
             <Icon size={16} />
             <span>{label}</span>
             <small>
-              {scoped.filter((item) => id === "all" || item.kind === id).length}
+              {scoped.filter((item) => !!item.organization.hidden === hiddenCollection && (id === "all" || item.kind === id)).length}
             </small>
           </button>
         ))}
@@ -423,6 +418,7 @@ export function MediaDock({
               <article
                 className={`media-dock-card ${selectedKeys.includes(item.key) ? "is-selected" : ""}`}
                 key={item.key}
+                onDoubleClick={event => { if (!event.target.closest("button,input,select")) openDetails(item); }}
               >
                 <button
                   type="button"
@@ -456,7 +452,8 @@ export function MediaDock({
                 </button>
                 <button
                   className="library-card-image"
-                  title="Drag to timeline · click to preview"
+                  title="Click to preview · double-click for details · drag to timeline"
+                  onDoubleClick={() => openDetails(item)}
                   aria-label={"Preview " + item.name}
                   onPointerDown={(e) => {
                     dragged.current = false;
@@ -501,6 +498,11 @@ export function MediaDock({
                     </span>
                   )}
                 </button>
+                <small className="library-used">{[
+                  item.versionIndex>=0 && `Version ${item.versionIndex+1}`,
+                  (item.createdAt || item.media?.createdAt) && Number.isFinite(new Date(item.createdAt || item.media?.createdAt).getTime()) && new Date(item.createdAt || item.media?.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric"}),
+                  project.clips.some(c=>c.activeTake===item.media?.id) && "Used in edit",
+                ].filter(Boolean).join(" · ")}</small>
                 <div className="library-card-caption">
                   <span title={item.name}>{item.name}</span>
                   <button
@@ -553,7 +555,7 @@ export function MediaDock({
                       );
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onClick={() => setPreview(item)}
+                    onClick={() => selectItem(item)}
                   >
                     <Folder size={12} />
                     {folderPath(
@@ -717,7 +719,7 @@ export function MediaDock({
           </section>
         ) : (
           preview && (
-            <section className="library-preview" aria-label="Asset preview">
+            <section key={preview.key} className="library-preview library-single-preview" aria-label="Asset preview">
               <header>
                 <div>
                   <small>{preview.kind}</small>
@@ -733,6 +735,8 @@ export function MediaDock({
                   <ChevronDown size={16} />
                 </button>
               </header>
+              <button type="button" className="library-open-details" onClick={() => openDetails(preview)}><Settings2 size={15}/> Open details</button>
+              <div className="library-preview-body">
               {preview.media?.kind === "video" ? (
                 <video
                   key={preview.key}
@@ -763,13 +767,9 @@ export function MediaDock({
               </p>
               {!!preview.asset?.variants?.length && (
                 <div className="library-inspector-looks">
-                  <small>{preview.asset.variants.length + 1} looks</small>
+                  <small>{characterLooks(preview.asset).length} looks</small>
                   <div>
-                    {[
-                      preview.asset.media,
-                      ...preview.asset.variants.map((variant) => variant.media),
-                    ]
-                      .filter(Boolean)
+                    {characterLooks(preview.asset)
                       .map((media) => (
                         <LibraryThumbnail key={media.id} media={media} />
                       ))}
@@ -782,12 +782,6 @@ export function MediaDock({
                 assetKey={libraryItemKey(project.id, preview)}
                 asset={preview.asset}
               />
-              {preview.asset && !preview.entry && (
-                <button onClick={() => onEdit(preview.asset.id)}>
-                  <Settings2 size={15} />
-                  Edit asset details
-                </button>
-              )}
               <button type="button" onClick={() => hideItem(preview)}>
                 {preview.organization.hidden ? (
                   <Eye size={15} />
@@ -798,7 +792,9 @@ export function MediaDock({
                   ? "Restore to library"
                   : "Hide from library"}
               </button>
-              <button onClick={() => onUse(preview)}>
+              </div>
+              {preview.media?.kind === "image" && onUseStartFrame && <button className="library-preview-use" onClick={() => onUseStartFrame(preview)}>Use as start frame</button>}
+              <button className="library-preview-use" onClick={() => onUse(preview)}>
                 <Plus size={16} />
                 Use at playhead
               </button>

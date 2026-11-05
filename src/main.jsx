@@ -1,3 +1,14 @@
+import {VersionReview} from "./version-review";
+import {jobElapsed} from "../shared/export-presentation.mjs";
+import { studioNavigation, studioStart, toolViews } from "../shared/studio-navigation.mjs";
+import { useReducer } from "react";
+import { applyAssetUnderstanding } from "../shared/asset-intelligence.mjs";
+import { AIProviderHeader, useAIRouting } from "./ai-providers";
+import { createPortal } from "react-dom";
+import { EditorToolRail, ElementsPalette } from "./editor-tools";
+import { EffectsPanel } from './effects';
+import { timelineInsertionContext } from "../shared/insertion-context.mjs";
+import { clipAudioTarget, patchClipAudio, toggleClipAudio } from "../shared/clip-audio.mjs";
 import {nextTimelineFocus, auditionAudio, auditionSource} from "../shared/timeline-focus.mjs";
 import {ProviderConnectHost} from "./provider-connect";
 import {SoundInspector} from "./sound-inspector";
@@ -11,7 +22,6 @@ import { useComposerAssistant, AssistantHeader } from "./composer-assistant";
 import { editShortcut, ownsTransport, editableSelector, controlSelector, shortcutHint } from "../shared/editor-shortcuts.mjs";
 import { TakeComparison } from "./take-comparison";
 import { TimelinePlayhead } from "./timeline-playhead";
-import { TimelineModes } from "./timeline-modes";
 import { DirectionTimeline } from "./direction-timeline";
 import { directionRanges } from "../shared/timeline-direction.mjs";
 import "./timeline-views.css";
@@ -30,7 +40,6 @@ import {
   SoundtrackTimeline,
   SoundtrackPanel,
 } from "./soundtrack";
-import { soundtrackDirtyClips } from "../shared/soundtrack.mjs";
 import { usePreviewMedia, PreviewDeck } from "./preview-media";
 import { usePreviewFullscreen } from "./preview-fullscreen";
 import { nextPreviewClip } from "../shared/preview-window.mjs";
@@ -115,6 +124,8 @@ import { ClipMixer, TakeStack, GenerationShelf } from "./timeline-ui";
 import {
   generationPool,
   removeStorySlot,
+  removeActiveGeneration,
+  removeGeneration,
   restorePoolEntry,
 } from "../shared/generation-pool.mjs";
 import { openClipPrompt, attachClipReference } from "../shared/clip-prompt.mjs";
@@ -124,6 +135,7 @@ import {
   compatibleVideoModels,
   fitVideoSettings,
   preferredVideoModel,
+  selectedVideoModel,
 } from "../shared/video-selection.mjs";
 import { WorkspaceHeader } from "./workspace";
 import { JsonComposer, StoryPlanner } from "./authoring";
@@ -243,6 +255,9 @@ import "./editor-canvas.css";
 import "./creative-composer.css";
 import "./sculpted.css";
 import "./workspace-polish.css";
+import "./editor-tools.css";
+import "./unified-plan.css";
+import "./studio-uplift.css";
 import {
   Icon,
   Modal,
@@ -268,43 +283,37 @@ function StudioApp() {
   useEffect(() => {
     if (audioInspector && !p?.audioClips.some(c => c.id === audioInspector)) setAudioInspector(null);
   }, [audioInspector, p?.audioClips]);
-  const [timelineMode, setTimelineMode] = useState("all");
+  const [navigation, navigate] = useReducer(studioNavigation, window.location.hash, studioStart);
+  const workspaceTab = navigation.tool;
+  const timelineMode = toolViews[workspaceTab] || "all";
+  const composerCollapsed = !navigation.panel;
+  const planView = workspaceTab === "plan";
+  const {state:aiRouting} = useAIRouting();
+  const [planSetupHost, setPlanSetupHost] = useState(null);
+  const [planTimelineHost, setPlanTimelineHost] = useState(null);
+  const [planFooterHost, setPlanFooterHost] = useState(null);
+  const planBoardRef = useRef(null);
+  const [effectInsertionContext, setEffectInsertionContext] = useState(null);
+  const [effectFrameAttachment, setEffectFrameAttachment] = useState(null);
+  useEffect(() => setEffectInsertionContext(null), [p?.id, p?.episodeId]);
   const [assistantScene, setAssistantScene] = useState(null);
-  const composerBeforeDirection = useRef(false);
   const [directionComposerHost, setDirectionComposerHost] = useState(null);
-  const audioFocus = timelineMode === "sound";
+  const audioFocus = workspaceTab === "sound";
   const openSoundtrack = () => {
     elementEditor.close();
     setAudioInspector(null);
-    setTimelineMode("sound");
+    navigate({type:"open", tool:"sound", force:true});
     setSoundtrackExpanded(true);
-    setComposerCollapsed(false);
   };
-  const closeSoundtrack = () => {
-    setTimelineMode("all");
-  };
-  const changeTimelineMode = (mode) => {
+  const closeEditorTool = () => navigate({type:"close"});
+  function revealComposer() { navigate({type:"open", tool:"prompt", force:true}); }
+  function selectEditorTool(tab, forceOpen = false, insertionContext = null) {
+    elementEditor.finishEdit();
+    elementEditor.close();
     setAudioInspector(null);
-    if(mode === "elements") elementEditor.open(); else elementEditor.close();
-    if (mode === "direction" && timelineMode !== "direction") {
-      composerBeforeDirection.current = composerCollapsed;
-      setComposerCollapsed(false);
-    } else if (timelineMode === "direction" && mode !== "direction") {
-      setComposerCollapsed(composerBeforeDirection.current);
-    }
-    if (mode === "sound") openSoundtrack();
-    else setTimelineMode(mode);
-  };
-  const soundtrackDirty = useMemo(
-    () => (p ? soundtrackDirtyClips(p).size : 0),
-    [
-      p?.clips,
-      p?.audioClips,
-      p?.drafts,
-      p?.assets,
-      p?.production?.voiceAssignments,
-    ],
-  );
+    if (tab === "effects") { setEffectInsertionContext(insertionContext); setEffectFrameAttachment(null); }
+    navigate({type:"open", tool:tab, force:forceOpen});
+  }
   const [projects, setProjects] = useState([]),
     [models, setModels] = useState([]),
     [videoMode, setVideoMode] = useState("demo"),
@@ -332,6 +341,7 @@ function StudioApp() {
     [submitting, setSubmitting] = useState(false),
     [previewRatio, setPreviewRatio] = useState("fit"),
     [comparing, setComparing] = useState(false),
+    [effectComparison, setEffectComparison] = useState(null),
     [dropAt, setDropAt] = useState(null),
     [dragItem, setDragItem] = useState(null),
     [dropPreview, setDropPreview] = useState(null),
@@ -341,7 +351,6 @@ function StudioApp() {
     [playbackRepair, setPlaybackRepair] = useState(null),
     [optimizingPreview, setOptimizingPreview] = useState(false),
     [playing, setPlaying] = useState(false),
-    [composerCollapsed, setComposerCollapsed] = useState(false),
     [selected, setPrimarySelected] = useState(null),
     [selectionIds, setSelectionIds] = useState([]),
     [foldState, setFoldState] = useState({ scope: "", ids: [] }),
@@ -351,12 +360,8 @@ function StudioApp() {
     [trimPreview, setTrimPreview] = useState(null),
     [frameMenu, setFrameMenu] = useState(false),
     [view, setView] = useState("compose"),
-    [workspace, setWorkspace] = useState(() =>
-      window.location.hash === "#story" ? "story" : "editor",
-    ),
     [home, setHome] = useState(() => window.location.hash === "#home"),
     [modal, setModal] = useState(null),
-    [structureCompose, setStructureCompose] = useState(false),
     [toast, setToast] = useState(""),
     [viewport, setViewport] = useState({ left: 0, width: 0 }),
     [busy, setBusy] = useState(""),
@@ -382,11 +387,11 @@ function StudioApp() {
       "",
       home
         ? "#home"
-        : workspace === "story"
-          ? "#story"
+        : planView
+          ? "#plan"
           : window.location.pathname,
     );
-  }, [workspace, home]);
+  }, [planView, home]);
   useEffect(() => {
     setBrowserPreference("frame-left-width", leftWidth);
     setBrowserPreference("splece-canvas-timeline-height", timelineHeight);
@@ -509,7 +514,7 @@ function StudioApp() {
     };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
-  }, [p, workspace, home]);
+  }, [p, planView, home]);
   useEffect(() => {
     setTime(0);
     setPlaying(false);
@@ -517,6 +522,7 @@ function StudioApp() {
     setSelectedGroupId(null);
     setInspect(null);
     setComparing(false);
+    setEffectComparison(null);
   }, [p?.id, p?.episodeId]);
   const draft =
     p?.drafts.find((d) => d.id === p.activeDraftId) ||
@@ -530,14 +536,11 @@ function StudioApp() {
         reconcilePlannedTimeline(n);
       }, false);
   }, [p?.id, p?.episodeId, structurePlan]);
-  useEffect(() => {
-    if (playing && !audioFocus && timelineMode !== "direction") setComposerCollapsed(true);
-  }, [playing, audioFocus, timelineMode]);
   const selectedGroup = structurePlan?.beats.find(
     (b) => b.id === selectedGroupId && !isStructureClip(b),
   );
   function selectStructureNode(node) {
-    setComposerCollapsed(false);
+    revealComposer();
     if (!node) {
       setSelectedGroupId("__root");
       return;
@@ -580,6 +583,7 @@ function StudioApp() {
   }
   const total = Math.max(
     0,
+    ...(planView ? (structurePlan?.beats || []).map(n=>n.start+n.duration) : []),
     ...(timelineProject?.clips.map((c) => c.start + c.duration) || []),
     ...(p?.audioClips?.map((c) => c.start + c.duration) || []),
     ...(p ? elementsFor(p).map(e=>e.start+e.duration) : []),
@@ -611,12 +615,19 @@ function StudioApp() {
       return false;
     }
     event.preventDefault(); event.stopPropagation();
-    setTimelineFocus(old=>nextTimelineFocus(old,{kind,id},event.ctrlKey));
+    const audioId=kind === "video" ? takeOf(p.clips.find(c=>c.id===id))?.lipSync?.audioId : undefined;
+    setTimelineFocus(old=>nextTimelineFocus(old,{kind,id,...(audioId ? {audioId} : {})},event.ctrlKey));
     setSelected(id);
     return true;
   }
+  useEffect(()=>{
+    const target=timelineFocus.armed;
+    if(!target || !p)return;
+    const items=target.kind==="audio" ? p.audioClips : target.kind==="element" ? p.elements : p.clips;
+    if(!items?.some(item=>item.id===target.id)) setTimelineFocus({armed:null,solo:null});
+  },[timelineFocus.armed,p?.audioClips,p?.elements,p?.clips]);
   const selectedClip = p?.clips.find((c) => c.id === selected);
-  const elementEditor = useElementsEditor({project:p,update,time,onSeek:at=>{setTime(at);setPlaying(false);},onOpen:()=>{setAudioInspector(null);setComposerCollapsed(true);setPlaying(false);}});
+  const elementEditor = useElementsEditor({project:p,update,time,onSeek:at=>{setTime(at);setPlaying(false);},onOpen:()=>{setAudioInspector(null);navigate({type:"inspect",tool:"elements"});setPlaying(false);}});
   const removeInspectedMedia = (clip = elementEditor.item) => {
     const id = clip?.id;
     if (!id) return;
@@ -639,7 +650,7 @@ function StudioApp() {
   const selectedAudio = p?.audioClips?.find((c) => c.id === selected);
   const sourceTake = takeOf(activeClip);
   const previewEnabled =
-    !!p && !home && workspace === "editor" && !poolExpanded && !comparing;
+    !!p && !home && !poolExpanded && !comparing;
   const fullscreen = usePreviewFullscreen({ enabled: previewEnabled, scope: p?.id + "/" + p?.episodeId, onExit: () => setPlaying(false) });
   const nextClip = nextPreviewClip(
     p?.clips || [],
@@ -774,7 +785,7 @@ function StudioApp() {
     observer.observe(el);
     measure();
     return () => observer.disconnect();
-  }, [workspace, home, p?.id]);
+  }, [planView, home, p?.id, firstRun]);
   useLayoutEffect(() => {
     const el = timeline.current;
     liveZoom.current = zoom;
@@ -792,9 +803,9 @@ function StudioApp() {
       });
   }, [zoom]);
   useEffect(() => {
-    if (workspace === "editor" && !home)
+    if (!planView && !home)
       timeline.current?.scrollTo({ left: Math.max(0, time * zoom - 100) });
-  }, [workspace, home, p?.id]);
+  }, [planView, home, p?.id]);
   useEffect(() => {
     if (!p) return;
     const intents = submissionJournal.read(p.id);
@@ -831,7 +842,7 @@ function StudioApp() {
     return d;
   }
   const addDraft = (source, snapshot) => {
-    setComposerCollapsed(false);
+    revealComposer();
     setSelectedGroupId(null);
     const d = source ? structuredClone(source) : createDefaultDraft(time);
     if (!source) {
@@ -898,7 +909,7 @@ function StudioApp() {
     );
     setSelected(id);
   };
-  const removeClip = () => {
+  const removeClip = ({ wholeClip = false } = {}) => {
     if (repairRange) {
       editRange("remove");
       return;
@@ -927,10 +938,25 @@ function StudioApp() {
       setSelected(null);
       setSelectedGroupId(null);
       setInspect(null);
-      notice("Planned clip removed. Undo restores the prompt and its place in Structure.");
+      notice("Planned clip removed. Undo restores the prompt and its place in Plan.");
       return;
     }
     if (selected) {
+      if (!wholeClip && selectedClip?.takes.length > 1) {
+        try {
+          update((n) => {
+            removeActiveGeneration(n, selected, jobs);
+            openClipPrompt(n, selected, jobs);
+          });
+          setPlaying(false);
+          setTime(selectedClip.start);
+          setInspect(null);
+          notice("Version removed from the stack. Undo restores it.");
+        } catch (error) {
+          notice(error.message);
+        }
+        return;
+      }
       update((n) => removeStorySlot(n, selected));
       setTime(
         Math.max(0, Math.min(time, total - (selectedClip?.duration || 0))),
@@ -1045,7 +1071,7 @@ function StudioApp() {
     }
     if (selectedClip) {
       setClipboard(structuredClone(selectedClip));
-      removeClip();
+      removeClip({ wholeClip: true });
     }
   };
   const paste = () => {
@@ -1096,17 +1122,18 @@ function StudioApp() {
       )
         return;
       if (timelineMode === "direction" && e.key === "Escape" && !e.target.closest?.(editableSelector)) {
-        setRepairRange(null);
+        setRepairRange(null); closeEditorTool();
         return;
       }
       if (elementEditor.handleKeyDown(e, {onRemoveMedia:removeInspectedMedia})) return;
       if (audioInspector && e.key === "Escape" && !e.target.closest?.(editableSelector)) {
-        e.preventDefault(); setAudioInspector(null); return;
+        e.preventDefault(); setAudioInspector(null); closeEditorTool(); return;
       }
+      if (e.key==="Escape" && workspaceTab && !e.target.closest?.(editableSelector)) {e.preventDefault(); closeEditorTool();return;}
       const command = editShortcut(e, {
         editable: !!e.target.closest?.(editableSelector),
         control: !!e.target.closest?.(controlSelector),
-        editor: workspace === "editor" && !["direction","elements"].includes(timelineMode) && !elementEditor.target,
+        editor: !planView && !["direction","elements"].includes(timelineMode) && !elementEditor.target,
         composer: !!e.target.closest?.(".creative-composer,.composer-companion"),
         timeline: !!e.target.closest?.(".timeline-panel"),
         clip: !!e.target.matches?.("[data-audio-clip]"),
@@ -1131,7 +1158,7 @@ function StudioApp() {
   useEffect(() => {
     const transportKey = (e) => {
       if (!ownsTransport(e, {
-        blocked: !p || home || workspace !== "editor" || modal || store.conflict || comparing || poolExpanded,
+        blocked: !p || home || modal || store.conflict || comparing || poolExpanded,
         editable: !!e.target.closest?.(editableSelector),
         control: !!e.target.closest?.(controlSelector + ',[role="dialog"]'),
       })) return;
@@ -1165,7 +1192,7 @@ function StudioApp() {
     comparing,
     poolExpanded,
     home,
-    workspace,
+    planView,
     modal,
     store.conflict,
     playing,
@@ -1197,10 +1224,42 @@ function StudioApp() {
       else restoreVideo(item.key, at);
     });
   }
+  async function openLibraryDetails(item) {
+    await act(async () => {
+      let asset = item.entry ? await adoptLibraryItem(item) : item.asset;
+      if (!asset && item.media) {
+        asset = { ...importedAsset(item.media, item.kind), name: item.name || item.media.name };
+        update(n => n.assets.push(asset));
+      }
+      if (asset) setModal({ type: "story-assets", assetId: asset.id });
+    });
+  }
+  const imageAnalysisQueue = useRef(Promise.resolve());
+  function queueImageAnalysis(asset) {
+    const projectId = p.id;
+    if (asset.kind !== "image" || !aiRouting?.routes.text.enabled) return;
+    imageAnalysisQueue.current = imageAnalysisQueue.current.catch(() => {}).then(async () => {
+      const patch = callback => update(n => { if (n.id !== projectId) return; const current = n.assets.find(a => a.id === asset.id); if (current?.media?.id === asset.media.id) callback(current); });
+      try {
+        patch(a => { a.imageAnalysis = "Reading image…"; });
+        await flush();
+        const input = { assetId:asset.id, mediaId:asset.media.id, kind:"image", name:asset.name, description:"" };
+        const quote = await api(`/projects/${projectId}/assets/understand/quote`, input);
+        const job = quote.cached && quote.state === "ready" ? quote : await api(`/projects/${projectId}/assets/understand`, {quoteId:quote.id});
+        if (job.state !== "ready") throw Error(job.error || "Image analysis is unavailable.");
+        patch(a => {
+          if (job.executionMode !== "test") Object.assign(a, applyAssetUnderstanding(a, job.result));
+          a.imageAnalysis = job.executionMode === "test" ? "Saved · analysis is simulated in Test mode" : "Image described and tagged";
+        });
+      } catch {
+        patch(a => { a.imageAnalysis = "Saved · use Update description to retry analysis"; });
+      }
+    });
+  }
   async function importFiles(files, intent = { kind: "footage" }) {
     if (!p) return;
     setBusy("Importing media · preparing smooth playback");
-    for (const f of files) {
+    for (const f of [...files]) {
       await act(async () => {
         const form = new FormData();
         form.append("file", f);
@@ -1214,6 +1273,7 @@ function StudioApp() {
         else {
           const asset = importedAsset(m, intent.kind);
           update((n) => n.assets.push(asset));
+          queueImageAnalysis(asset);
           if (intent.folderId) {
             const next = await api(
               "/library/organization",
@@ -1235,7 +1295,9 @@ function StudioApp() {
   function importTimelineFiles(files, at = time, splitAtPlayhead = false) {
     let cursor = at;
     return importFiles(files, {kind:'footage', onMedia: m => {
-      update(n => n.assets.push(importedAsset(m, m.kind === 'audio' ? 'audio' : 'footage')));
+      const asset = importedAsset(m, m.kind === 'audio' ? 'audio' : 'footage');
+      update(n => n.assets.push(asset));
+      queueImageAnalysis(asset);
       if (splitAtPlayhead && m.kind !== 'audio') {
         const source = p.clips.find(c=>c.activeTake && cursor > c.start && cursor < c.start+c.duration);
         if (source) {
@@ -1248,12 +1310,13 @@ function StudioApp() {
       cursor += m.duration;
     }});
   }
-  function importAtPlayhead(kind) {
-    const at=time;
+  function importAtPlayhead(kind, at = time) {
+    const context = timelineInsertionContext(p, at);
+    const sourceClip = context.kind === "clip" ? p.clips.find(c => c.id === context.clipId) : null;
     importIntent.current={kind:'footage',onMedia:m=>{
       update(n=>n.assets.push(importedAsset(m,kind==='audio'?'audio':'footage')));
-      if(kind==='image' && activeClip?.activeTake){
-        update(n=>{const {slot}=insertPromptAtFrame(n,activeClip.id,at,m.duration);slot.takes=[m];slot.activeTake=m.id;slot.in=0;slot.plannedReservation=false;});
+      if(kind==='image' && sourceClip?.activeTake){
+        update(n=>{const {slot}=insertPromptAtFrame(n,sourceClip.id,at,m.duration);slot.takes=[m];slot.activeTake=m.id;slot.in=0;slot.plannedReservation=false;});
       } else addMedia(m,at);
     }};
     fileInput.current.multiple=false;
@@ -1277,7 +1340,7 @@ function StudioApp() {
       d.automation={...d.automation,frames:true,startFrame:true,endFrame:true};
       n.drafts.push(d);n.activeDraftId=d.id;target=result.slot;
     });
-    setModal(null);setSelected(target.id);setTime(target.start);setPlaying(false);setView('compose');setComposerCollapsed(false);
+    setModal(null);setSelected(target.id);setTime(target.start);setPlaying(false);setView('compose');revealComposer();
   }
   async function optimizePlayback() {
     if (!activeTake || optimizingPreview) return;
@@ -1295,9 +1358,10 @@ function StudioApp() {
     });
     setOptimizingPreview(false);
   }
-  function useDroppedAsset(asset, at) {
+  function useDroppedAsset(asset, at, asReference = false) {
     if (
       ["footage", "audio"].includes(asset.kind) ||
+      (asset.kind === "image" && !asReference) ||
       asset.media?.kind === "audio"
     ) {
       if (asset.media) addMedia(asset.media, at);
@@ -1309,7 +1373,7 @@ function StudioApp() {
     update((n) =>
       attachClipReference(n, target?.id, asset.id, jobs, createDefaultDraft),
     );
-    setComposerCollapsed(false);
+    revealComposer();
     setSelectedGroupId(null);
     setView("compose");
     setPlaying(false);
@@ -1463,7 +1527,7 @@ function StudioApp() {
           ?.closest(".creative-composer") &&
         !["footage", "audio"].includes(asset.kind)
       )
-        useDroppedAsset(asset, draft.start);
+        useDroppedAsset(asset, draft.start, true);
     };
     const cancel = () => {
       window.removeEventListener("pointermove", move);
@@ -1558,23 +1622,23 @@ function StudioApp() {
       setSubmitting(false);
     }
   }
-  async function exportEpisode() {
+  async function exportEpisode(fileName) {
     const missing = p.clips.filter((c) => !c.activeTake);
     if (missing.length) {
       notice(
-        `Fill the ${missing.length} unfilled timeline slot${missing.length === 1 ? "" : "s"} before exporting, or remove them in Structure.`,
+        `Fill the ${missing.length} unfilled timeline slot${missing.length === 1 ? "" : "s"} before exporting, or remove them in Plan.`,
       );
       return;
     }
     await act(async () => {
       const revision = await flush();
-      const j = await api("/projects/" + p.id + "/export", { revision });
+      const j = await api("/projects/" + p.id + "/export", { revision, fileName });
       setJobs((js) => [...js, j]);
       setModal("jobs");
     });
   }
   function selectTake(c, take) {
-    setComposerCollapsed(false);
+    setPlaying(false);
     setSelectedGroupId(null);
     try {
       update((n) => {
@@ -1599,7 +1663,7 @@ function StudioApp() {
     if (next !== idx) selectTake(c, c.takes[next]);
   }
   function focusDraft(d) {
-    setComposerCollapsed(false);
+    revealComposer();
     setSelectedGroupId(null);
     const { clip, start, seek } = draftTimelinePosition(p, d, jobs);
     update((n) => {
@@ -1693,7 +1757,7 @@ function StudioApp() {
       n.drafts.push(d);
       n.activeDraftId = d.id;
     });
-    setComposerCollapsed(false);
+    revealComposer();
     setSelectedGroupId(null);
     setSelected(null);
     setView("compose");
@@ -1855,12 +1919,79 @@ function StudioApp() {
       setSelectedGroupId(node.id);
       setSelected(null);
       setSelectionIds(members.map((c) => c.id));
-      setComposerCollapsed(false);
+      revealComposer();
       setTime(nextStart);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", clear);
+  }
+  function connectPhotosAction(at) {
+    const context = timelineInsertionContext(p, at);
+    const ordered = [...p.clips].sort((a, b) => a.start - b.start);
+    const before = ordered.find(c => c.id === (context.previousClipId || context.clipId));
+    const after = context.nextClipId ? ordered.find(c => c.id === context.nextClipId) : ordered[ordered.indexOf(before) + 1];
+    return before && after && takeOf(before)?.kind === "image" && takeOf(after)?.kind === "image"
+      ? () => setModal({ type: "photo-story", beforeId: before.id, afterId: after.id }) : undefined;
+  }
+  function insertTimelineItem(kind, at) {
+    const context = timelineInsertionContext(p, at, repairRange);
+    if (kind === "effect") {
+      setTime(context.at); setPlaying(false); setFrameMenu(false);
+      selectEditorTool("effects", true, { ...context, id: uid() });
+      return;
+    }
+    if (kind === "image" || kind === "audio") { importAtPlayhead(kind, at); return; }
+    if (kind === "library") { setTime(at); setPoolExpanded(true); return; }
+    if (kind === "group") { insertAtCut("group", at); return; }
+    if (kind !== "video") return;
+    const sourceClip = context.kind === "clip" ? p.clips.find(c => c.id === context.clipId) : null;
+    if (!sourceClip?.activeTake) { insertAtCut("clip", at); return; }
+
+    let target;
+    update((n) => {
+      const defaults = createDefaultDraft(at);
+      const result = insertPromptAtFrame(
+        n,
+        sourceClip.id,
+        at,
+        defaults.settings.duration,
+      );
+      const d = beatDraft(n, result.node, defaults);
+      d.frameOverrides = {
+        start: {
+          mode: "manual",
+          frame: result.frames.start,
+        },
+        end: { mode: "manual", frame: result.frames.end },
+      };
+      d.automation = {
+        ...d.automation,
+        frames: true,
+        startFrame: true,
+        endFrame: true,
+      };
+      const source = n.drafts.find(
+        (x) =>
+          x.targetId === sourceClip.id ||
+          x.id === sourceClip.sourceDraftId,
+      );
+      if (source) {
+        d.referenceIds = [...(source.referenceIds || [])];
+        d.referenceOptions = structuredClone(
+          source.referenceOptions || {},
+        );
+      }
+      n.drafts.push(d);
+      n.activeDraftId = d.id;
+      target = result.slot;
+    });
+    setTime(target.start);
+    setSelected(target.id);
+    setSelectedGroupId(null);
+    revealComposer();
+    setFrameMenu(false);
+    setView("compose");
   }
   function insertAtCut(type, at) {
     let created, slot;
@@ -1885,7 +2016,7 @@ function StudioApp() {
     if (type === "clip") selectInsertedClip(slot);
     setTime(slot.start);
     setPlaying(false);
-    setComposerCollapsed(false);
+    revealComposer();
     setView("compose");
   }
   function pointerSelection(e) {
@@ -1965,7 +2096,7 @@ function StudioApp() {
       pointerSelection(e);
       return;
     }
-    setComposerCollapsed(false);
+    revealComposer();
     const node = plannedNode(p, c);
     const planned = editablePlannedSlot(c);
     if (node && !c.activeTake && !planned && !edge) {
@@ -2200,7 +2331,7 @@ function StudioApp() {
   );
   const model = models.find((m) => m.id === draft?.settings.model);
   const composerAssistant = useComposerAssistant({project:p,draft,sceneId:assistantScene,model,
-    visible:!home && workspace === "editor" && !composerCollapsed && !audioFocus && timelineMode !== "direction" && !selectedGroup && !modal && !submitting && view === "compose",flush,update});
+    visible:workspaceTab === "prompt" && !home && !planView && !composerCollapsed && !audioFocus && timelineMode !== "direction" && !selectedGroup && !modal && !submitting && view === "compose",flush,update});
   const prepared = useMemo(
     () => (p && draft ? compile(p, draft, model) : null),
     [p, draft, model],
@@ -2235,10 +2366,9 @@ function StudioApp() {
           duration: draft.settings.duration,
         }
       : draft.settings;
-    const nextModel = preferredVideoModel(
-      compatibleModels,
-      requested.model,
-      videoDefaults[videoMode]?.model,
+    const nextModel = selectedVideoModel(
+      models, compatibleModels, requested, videoDefaults[videoMode]?.model,
+      changingProvider ? null : draft.manualVideoModel,
     );
     if (!nextModel) return;
     const next = fitVideoSettings(requested, nextModel);
@@ -2262,13 +2392,21 @@ function StudioApp() {
     home,
     compatibleIds,
     JSON.stringify(draft?.settings),
+    draft?.manualVideoModel,
     videoMode,
     JSON.stringify(videoDefaults),
   ]);
-  function changeModel(modelId) {
-    const m = compatibleModels.find((x) => x.id === modelId);
+  useEffect(()=>{
+    const chosen=aiRouting?.routes.video;
+    if(!draft || draft.manualVideoModel || !chosen?.model || !chosen.enabled)return;
+    if(compatibleModels.some(m=>m.id===chosen.model) && draft.settings.model!==chosen.model)changeModel(chosen.model, false);
+  },[aiRouting?.routes.video.model,aiRouting?.routes.video.enabled,videoMode,compatibleIds,draft?.id,draft?.manualVideoModel]);
+  function changeModel(modelId, manual = true) {
+    if (!modelId) { editDraft(d => { delete d.manualVideoModel; }); return; }
+    const m = models.find((x) => x.id === modelId && x.supported !== false);
     if (!m) return;
     editDraft((d) => {
+      if (manual) d.manualVideoModel = modelId;
       const next = fitVideoSettings(d.settings, m);
       d.settingsNotice = Object.keys(next)
         .filter((k) => next[k] !== d.settings[k])
@@ -2286,7 +2424,6 @@ function StudioApp() {
       notice(e.message);
     }
   }
-  useEffect(() => { setStructureCompose(false); }, [p?.id, p?.episodeId]);
   const renderComposer = (close) => (<CreativeComposer
                     assistant={composerAssistant}
                     key={draft.id}
@@ -2324,7 +2461,7 @@ function StudioApp() {
                     setQuote={setQuote}
                     catalogTick={catalogTick}
                     submitting={submitting}
-                    visible={(workspace === "story" ? structureCompose : !composerCollapsed) && !modal}
+                    visible={!composerCollapsed && workspaceTab === "prompt" && !modal}
                     generate={generate}
                     holdToGenerate={holdToGenerate}
                     modelFavorites={modelFavorites}
@@ -2367,6 +2504,7 @@ function StudioApp() {
         onResume={() => setHome(false)}
         onOpen={async (id) => {
           await load(id);
+          closeEditorTool(); setPoolExpanded(false); elementEditor.close(); setComparing(false);
           setJobs([]);
           setHome(false);
         }}
@@ -2374,6 +2512,7 @@ function StudioApp() {
           await flush();
           const opened = await api("/projects/open", { folder });
           await load(opened.project.id);
+          closeEditorTool(); setPoolExpanded(false); elementEditor.close(); setComparing(false);
           setProjects(await api("/projects"));
           setJobs([]);
           setHome(false);
@@ -2382,15 +2521,14 @@ function StudioApp() {
         {modal === "create" && (
           <CreateProject
             onClose={() => setModal(null)}
-            onCreate={async (body) => {
+            onCreate={async (body, entry = {}) => {
               await flush();
               const r = await api("/projects", body);
               await load(r.project.id);
+              setPoolExpanded(false); elementEditor.close(); setComparing(false);
               setProjects(await api("/projects"));
               setHome(false);
-              setWorkspace(
-                body.templateId && body.includeSample ? "editor" : "story",
-              );
+              selectEditorTool(entry.start === "blank" ? "prompt" : "plan", true);
               setModal(null);
             }}
           />
@@ -2419,20 +2557,20 @@ function StudioApp() {
     );
   return (
     <div
-      className={
-        "studio " +
-        (workspace === "story" ? "story-shell" : "editor-shell") +
-        (poolExpanded && workspace === "editor" ? " assets-expanded" : "")
-      }
+      className={`studio editor-shell${poolExpanded ? " assets-expanded" : ""}${planView ? " plan-view" : ""}`}
       style={{
         "--left": leftWidth + "px",
         "--timeline": timelineHeight + "px",
+      }}
+      onPointerDownCapture={event => {
+        if (event.target === event.currentTarget) closeEditorTool();
       }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         if (e.dataTransfer.files.length) {
           e.preventDefault();
-          importFiles(e.dataTransfer.files);
+          if (planView || !p.clips.length) { importTimelineFiles([...e.dataTransfer.files], 0); selectEditorTool("prompt", true); }
+          else importFiles([...e.dataTransfer.files]);
         }
       }}
     >
@@ -2445,14 +2583,15 @@ function StudioApp() {
         onChange={(e) => {
           const intent = importIntent.current;
           importIntent.current = { kind: "footage" };
-          importFiles(e.target.files, intent);
+          if (intent.toTimeline) { importTimelineFiles([...e.target.files], 0); selectEditorTool("prompt", true); }
+          else importFiles([...e.target.files], intent);
           e.target.value = "";
           e.target.multiple = true;
           e.target.accept = "video/*,image/*,audio/*";
         }}
       />
       <WorkspaceHeader
-        assistantControl={<AssistantHeader assistant={composerAssistant} />}
+        assistantControl={<AIProviderHeader assistant={composerAssistant} onConnections={()=>setModal("connections")} />}
         project={p}
         billing={billing}
         onUndo={() => revise("undo")}
@@ -2460,13 +2599,8 @@ function StudioApp() {
         canUndo={store.canUndo}
         canRedo={store.canRedo}
         revisionFlash={revisionFlash}
-        workspace={workspace}
         status={status}
         jobCount={running.length + sound.runs.filter(r => ["queued", "processing"].includes(r.state)).length + sound.lip.jobs.filter(lipSyncActive).length}
-        onWorkspace={(next) => {
-          setPlaying(false);
-          setWorkspace(next);
-        }}
         onHome={() =>
           act(async () => {
             await flush();
@@ -2479,36 +2613,34 @@ function StudioApp() {
         onAssets={() => setModal("assets")}
         onTool={setModal}
       />
-      {workspace === "story" ? (
-        <StoryPlanner key={`${p.id}:${p.episodeId}`}
-          models={models}
-          jobs={jobs}
-          onJobs={() => setModal("jobs")}
-          composer={structureCompose ? renderComposer(() => setStructureCompose(false)) : null}
-          onCompose={(d) => { focusDraft(d); setPlaying(false); setView("compose"); setStructureCompose(true); }}
-          workflow={structureWorkflow}
-          assistant={{...composerAssistant,flush}}
-          onAssets={(assetId) => setModal({ type: "story-assets", assetId })}
-          focusedBeatId={selectedGroupId || draft.storyBeatId}
-          defaultSettings={videoDefaults[videoMode] || draft.settings}
-          project={p}
-          update={update}
-          flush={flush}
-          time={time}
-          onOpen={(d) => {
-            setWorkspace("editor");
-            focusDraft(d);
-            setPlaying(false);
-            setView("compose");
-          }}
-        />
-      ) : (
-        <>
+      <StoryPlanner key={`${p.id}:${p.episodeId}`}
+        embedded active={planView} setupHost={planSetupHost} timelineHost={planTimelineHost}
+        timelineZoom={zoom} onTimelineZoom={setZoom} timelineRef={planBoardRef} time={time} onSeek={at=>{setTime(at);setPlaying(false);}}
+        models={models} jobs={jobs} workflow={structureWorkflow}
+        onJobs={() => setModal("jobs")}
+        onClose={closeEditorTool}
+        onBlank={() => selectEditorTool("prompt", true)}
+        onImportFiles={files => { importTimelineFiles(files, 0); selectEditorTool("prompt", true); }}
+        onImportImages={() => {
+          importIntent.current = {kind:"image", toTimeline:true};
+          fileInput.current.accept = "image/*";
+          fileInput.current.click();
+        }}
+        onCompose={d => { focusDraft(d); setPlaying(false); setView("compose"); }}
+        onGroup={selectStructureNode}
+        onOpenMedia={clip => { if (!clip) return; setSelected(clip.id); setTime(clip.start); update(n=>openClipPrompt(n,clip.id,jobs)); revealComposer(); }}
+        onPreview={clip => { setTime(clip.start); setPlaying(true); }}
+        onAssets={assetId => setModal({ type: "story-assets", assetId })}
+        defaultSettings={videoDefaults[videoMode] || draft.settings}
+        project={p} update={update} flush={flush}
+      />
+      <>
           <main
             className={`workspace editor-without-sidebar editor-canvas ${composerCollapsed ? "composer-collapsed" : ""} ${audioFocus ? "audio-focus" : ""}`}
             inert={poolExpanded}
             aria-hidden={poolExpanded}
           >
+            <EditorToolRail value={workspaceTab} collapsed={!workspaceTab} onSelect={selectEditorTool}/>
             <div
               className="composer-shell"
               onFocusCapture={event => { const scene = event.target.closest?.("[data-scene-id]"); if (scene) setAssistantScene(scene.dataset.sceneId); }}
@@ -2518,29 +2650,16 @@ function StudioApp() {
               aria-hidden={composerCollapsed}
               inert={composerCollapsed ? true : undefined}
             >
-              <aside
-                className="prompt-pane"
-                data-group={!!selectedGroup}
-                style={{
-                  "--story-kind-color":
-                    structurePlan &&
-                    (selectedGroup ||
-                      structurePlan.beats.find(
-                        (b) => b.id === draft.storyBeatId,
-                      ))
-                      ? structureColor(
-                          structurePlan,
-                          selectedGroup ||
-                            structurePlan.beats.find(
-                              (b) => b.id === draft.storyBeatId,
-                            ),
-                        )
-                      : "#80aff5",
-                }}
-              >
-                {timelineMode === "direction" ? (
-                  <div className="direction-composer-host" ref={setDirectionComposerHost} />
-                ) : audioFocus ? (
+              <aside className="tool-pane plan-tool-pane" role="tabpanel" id="workspace-panel-plan" aria-labelledby="workspace-tab-plan" hidden={!planView}>
+                <div className="plan-setup-host" ref={setPlanSetupHost}/>
+              </aside>
+              <aside className="tool-pane" role="tabpanel" id="workspace-panel-effects" aria-labelledby="workspace-tab-effects" hidden={workspaceTab !== "effects"}>
+                <EffectsPanel onOpenProject={async (id) => { await load(id); closeEditorTool(); setPoolExpanded(false); elementEditor.close(); setComparing(false); setPlaying(false); setJobs([]); setProjects(await api("/projects")); setHome(false); }} key={p.id + p.episodeId} insertionContext={effectInsertionContext} frameAttachment={effectFrameAttachment} project={p} selectedIds={[...selection]} update={update} flush={flush} testMode={!aiRouting?.routes.video.enabled} onClose={closeEditorTool} onCompare={job => { setEffectComparison(job); setComparing(true); setPlaying(false); }} onConnections={() => setModal("connections")}/>
+              </aside>
+              <aside className="tool-pane" role="tabpanel" id="workspace-panel-elements" aria-labelledby="workspace-tab-elements" hidden={workspaceTab !== "elements"}>
+                <ElementsPalette disabled={(p.elements?.length || 0) >= 100} onClose={closeEditorTool} onAdd={kind => { elementEditor.add(kind); }}/>
+              </aside>
+              <aside className="tool-pane" role="tabpanel" id="workspace-panel-sound" aria-labelledby="workspace-tab-sound" hidden={workspaceTab !== "sound"}>
                   <SoundtrackPanel
                     key={p.id + p.episodeId}
                     project={p}
@@ -2560,12 +2679,38 @@ function StudioApp() {
                     onSeek={setTime}
                     selectedAudio={selectedAudio}
                     update={update}
-                    testMode={videoMode === "demo"}
+                    testMode={!aiRouting?.routes.audio.enabled}
                     embedded
-                    onClose={closeSoundtrack}
+                    onClose={closeEditorTool}
                     onMixer={() => setModal("audio")}
                   />
-                ) : selectedGroup ? (
+              </aside>
+              <aside className="tool-pane" role="tabpanel" id="workspace-panel-direction" aria-labelledby="workspace-tab-direction" hidden={workspaceTab !== "direction"}>
+                <div className="direction-composer-host" ref={setDirectionComposerHost} />
+              </aside>
+              <aside
+                className="prompt-pane"
+                role="tabpanel" id="workspace-panel-prompt" aria-labelledby="workspace-tab-prompt"
+                hidden={workspaceTab !== "prompt"}
+                data-group={!!selectedGroup}
+                style={{
+                  "--story-kind-color":
+                    structurePlan &&
+                    (selectedGroup ||
+                      structurePlan.beats.find(
+                        (b) => b.id === draft.storyBeatId,
+                      ))
+                      ? structureColor(
+                          structurePlan,
+                          selectedGroup ||
+                            structurePlan.beats.find(
+                              (b) => b.id === draft.storyBeatId,
+                            ),
+                        )
+                      : "#80aff5",
+                }}
+              >
+                {selectedGroup ? (
                   <GroupComposer
                     project={p}
                     node={selectedGroup}
@@ -2573,7 +2718,7 @@ function StudioApp() {
                     onToggleCollapse={() => toggleGroupFold(selectedGroup)}
                     update={update}
                     onSelect={selectStructureNode}
-                    onStructure={() => setWorkspace("story")}
+                    onStructure={() => selectEditorTool("plan", true)}
                   />
                 ) : selection.size > 1 ? (
                   <div className="group-composer selection-composer">
@@ -2632,7 +2777,7 @@ function StudioApp() {
                     </div>
                   </div>
                 ) : (
-                  renderComposer(() => {setView("compose");setComposerCollapsed(true);})
+                  renderComposer(() => {setView("compose");closeEditorTool();})
                 )}
               </aside>
               <span className="composer-pointer" aria-hidden="true" />
@@ -2656,18 +2801,8 @@ function StudioApp() {
                 playing && previewStatus.state === "ready" && !poolExpanded
               }
             />
-            {composerCollapsed && !elementEditor.target && !audioInspector && timelineMode !== "direction" && (
-              <button
-                className="composer-edge-reveal"
-                aria-label="Open prompt composer"
-                title="Open selected prompt"
-                onClick={() => setComposerCollapsed(false)}
-              >
-                <ChevronRight size={18} />
-              </button>
-            )}
             <section className="viewer">
-              {comparing ? <TakeComparison key={p.id} project={p} selectedClipId={selectedClip?.id || activeClip?.id} onClose={()=>setComparing(false)} onPlay={()=>setPlaying(false)} timelinePlaying={playing}/> : <>
+              {comparing ? <TakeComparison key={effectComparison?.id || p.id} effectJob={effectComparison} project={p} selectedClipId={selectedClip?.id || activeClip?.id} onClose={()=>{setComparing(false);setEffectComparison(null);}} onPlay={()=>setPlaying(false)} timelinePlaying={playing}/> : <>
 
               <div className="viewer-header">
                 {timelineFocus.armed && <button onClick={()=>setTimelineFocus({armed:null,solo:null})} title="Restore normal preview">{timelineFocus.solo ? "Focus only · Exit" : "Click again to focus · Cancel"}</button>}
@@ -2697,8 +2832,12 @@ function StudioApp() {
                     </button>
                   ))}
                 </nav>
-                <Icon icon={SlidersHorizontal} label="Frame selected footage" onClick={()=>elementEditor.inspectMedia(selectedClip || activeClip)} />
-                <Icon icon={Columns2} label="Compare clips & takes" onClick={()=>{setPlaying(false);setComparing(true);}} />
+                {planView && <Icon icon={playing ? Pause : Play} label={playing ? "Pause preview" : "Play preview"} onClick={() => {
+                  if (time >= total) setTime(0);
+                  setPlaying(value => !value);
+                }}/>}
+                <Icon icon={SlidersHorizontal} label={activeClip?.activeTake && takeOf(activeClip)?.kind === "image" ? "Frame selected image" : "Frame selected clip"} onClick={()=>elementEditor.inspectMedia(selectedClip || activeClip)} />
+                <Icon icon={Columns2} label="Compare versions" onClick={()=>{setPlaying(false);setEffectComparison(null);setComparing(true);}} />
                 <Icon
                   icon={Maximize2}
                   label="Fullscreen preview"
@@ -2760,7 +2899,8 @@ function StudioApp() {
                       </div>
                     )}
                   </div>
-                {!activeTake && (
+                {!activeTake && previewJob && <JobProgress job={previewJob} surface="preview" />}
+                {!activeTake && !previewJob && (
                   <div className="empty-preview">
                     <Clapperboard size={42} />
                     <h2>
@@ -2780,7 +2920,7 @@ function StudioApp() {
                           : "This time is reserved. Open the slot to develop it whenever you’re ready."
                         : p.audioClips.length
                           ? "Your audio continues here. Add picture above it, or keep this section black in the export."
-                          : "Bring in footage, or create your first scene."}
+                          : "Drop photos or video here, or create your first scene."}
                     </p>
                     {activeClip &&
                       !previewJob &&
@@ -2802,8 +2942,8 @@ function StudioApp() {
                     )}
                     {!p.clips.length && (
                       <div>
-                        <button onClick={() => fileInput.current.click()}>
-                          <Upload size={15} /> Import footage
+                        <button onClick={() => { importIntent.current = {kind:"footage",toTimeline:true}; fileInput.current.accept="video/*,image/*"; fileInput.current.click(); }}>
+                          <Upload size={15} /> Add photos or video
                         </button>
                         <button onClick={demo} disabled={!!busy}>
                           <Play size={15} /> Add sample footage
@@ -2883,7 +3023,7 @@ function StudioApp() {
                         })
                       }
                     >
-                      Generate another take here <ArrowRight size={13} />
+                      Generate another version here <ArrowRight size={13} />
                     </button>
                   </div>
                 )}
@@ -2902,10 +3042,12 @@ function StudioApp() {
             className="divider horizontal"
             onPointerDown={(e) => resize(e, "timeline")}
           />
-          <section className={`timeline-panel timeline-view-${timelineMode}`} data-timeline-view={timelineMode}>
-            <div className="timeline-mode-rail">
-              <TimelineModes value={timelineMode} onChange={changeTimelineMode} soundActive={sound.active} soundDirty={!!soundtrackDirty} />
-            </div>
+          <section className="plan-timeline-panel" hidden={!planView} aria-label="Plan timeline">
+            <div className="plan-timeline-host" ref={setPlanTimelineHost}/>
+            <div className="plan-footer-host" ref={setPlanFooterHost}/>
+          </section>
+          <section hidden={planView} className={`timeline-panel timeline-view-${timelineMode}`} data-timeline-view={timelineMode}>
+            {timelineMode !== "all" && <div className="timeline-focus-status"><span>{({video:"Video",sound:"Sound",elements:"Elements",direction:"Direction"})[timelineMode]} view</span><button onClick={closeEditorTool}>Show all</button></div>}
             <div
               className="timeline-edit-rail"
               role="toolbar"
@@ -2969,7 +3111,7 @@ function StudioApp() {
                 <Sparkles size={16} />
               </button>
               <Icon icon={Clipboard} label={`Paste clip (${shortcutHint("V", false, navigator.platform)})`} onClick={paste} />
-              <Icon icon={Trash2} label="Delete clip" onClick={removeClip} />
+              <Icon icon={Trash2} label={repairRange ? "Delete range" : selectedAudio ? "Delete audio" : selectedClip?.takes.length > 1 ? "Remove version" : "Delete clip"} onClick={removeClip} />
             </div>
             {detachedGenerations.length > 0 && (
               <div
@@ -3073,7 +3215,7 @@ function StudioApp() {
                   }}
                 >
                   <div className="timeline-grid" aria-hidden="true" />
-                  {!audioFocus && timelineMode !== "direction" &&
+                  {workspaceTab === "prompt" && timelineMode !== "direction" &&
                     !composerCollapsed &&
                     !selectedGroupId &&
                     selection.size <= 1 &&
@@ -3163,11 +3305,8 @@ function StudioApp() {
                       clips={foldedItems}
                       zoom={zoom}
                       viewport={viewport}
-                      onInsert={insertAtCut}
-                      onPool={(at) => {
-                        setTime(at);
-                        setPoolExpanded(true);
-                      }}
+                      onInsert={insertTimelineItem}
+                      getConnectPhotos={connectPhotosAction}
                     />
                     {visibleClips(
                       foldedItems,
@@ -3255,6 +3394,7 @@ function StudioApp() {
                           </div>
                         );
                       const c = item.clip;
+                      const clipSound = clipAudioTarget(p, c);
                       const m = takeOf(c),
                         idx = c.takes.findIndex((t) => t.id === c.activeTake),
                         clipJob = currentSlotJob(c, jobs, p.episodeId);
@@ -3282,7 +3422,7 @@ function StudioApp() {
                           aria-label={
                             c.plannedReservation && !m
                               ? `Open planned ${plannedNode(p, c)?.nodeType || "clip"}: ${plannedNode(p, c)?.title || "Clip"} at ${tc(c.start)}`
-                              : `Clip at ${tc(c.start)}, take ${idx + 1} of ${c.takes.length}`
+                              : `Clip at ${tc(c.start)}, version ${idx + 1} of ${c.takes.length}`
                           }
                           onContextMenu={e=>{if(e.ctrlKey)e.preventDefault();}}
                           onPointerDown={(e) => pointerClip(e, c)}
@@ -3291,7 +3431,7 @@ function StudioApp() {
                             e.preventDefault(); e.stopPropagation();
                             setSelected(c.id); setSelectedGroupId(null); setInspect(null);
                             if (m) elementEditor.inspectMedia(c);
-                            else { setComposerCollapsed(false); update(n => openClipPrompt(n, c.id, jobs), false); }
+                            else { revealComposer(); update(n => openClipPrompt(n, c.id, jobs), false); }
                           }}
                           onWheel={(e) => {
                             if (c.takes.length < 2) return;
@@ -3330,7 +3470,7 @@ function StudioApp() {
                                 selectStructureNode(plannedNode(p, c));
                                 return;
                               }
-                              setComposerCollapsed(false);
+                              revealComposer();
                               update(
                                 (n) => openClipPrompt(n, c.id, jobs),
                                 false,
@@ -3380,17 +3520,15 @@ function StudioApp() {
                               focusDraft(p.drafts.find((d) => d.id === id))
                             }
                           />
-                          {m?.audio && (
+                          {clipSound && (
                             <ClipAudioShape
-                              clip={c}
-                              media={m}
-                              sourceIn={takeSourceIn(c, m)}
+                              clip={{ ...clipSound.record, duration: c.duration }}
+                              media={{ id: clipSound.mediaId }}
+                              label={clipSound.label}
+                              sourceIn={clipSound.sourceIn}
                               onChange={(patch) =>
                                 update((n) => {
-                                  const target = n.clips.find(
-                                    (x) => x.id === c.id,
-                                  );
-                                  if (target) Object.assign(target, patch);
+                                  patchClipAudio(n, c.id, patch);
                                 })
                               }
                             />
@@ -3401,6 +3539,7 @@ function StudioApp() {
                             clip={c}
                             selected={selection.has(c.id)}
                             media={m}
+                            sound={clipSound?.record}
                             job={clipJob}
                             jobs={clipJobs(c, jobs, p.episodeId)}
                             zoom={zoom}
@@ -3413,8 +3552,8 @@ function StudioApp() {
                             }
                             onMute={() =>
                               update((n) => {
-                                const x = n.clips.find((x) => x.id === c.id);
-                                x.mute = !x.mute;
+                                const target = clipAudioTarget(n, n.clips.find(x => x.id === c.id));
+                                if (target) Object.assign(target.record, toggleClipAudio(target.record));
                               })
                             }
                           />
@@ -3438,12 +3577,14 @@ function StudioApp() {
                       );
                     })}
                   </div>}
-                  {(timelineMode === "all" || timelineMode === "elements") && <ElementsTimeline editor={elementEditor} onFocusItem={(e,id)=>focusTimeline(e,"element",id)} zoom={zoom} focused={timelineMode === "elements"}/>}
-                  {(timelineMode === "all" || timelineMode === "direction") && <DirectionTimeline
+                  {(timelineMode === "elements" || (timelineMode === "all" && elementsFor(p).length > 0)) && <ElementsTimeline editor={elementEditor} onFocusItem={(e,id)=>focusTimeline(e,"element",id)} zoom={zoom} focused={timelineMode === "elements"}/>}
+                  {(timelineMode === "direction" || (timelineMode === "all" && directionItems.length > 0)) && <DirectionTimeline
                     key={p.id + p.episodeId}
                     project={p}
                     composerHost={directionComposerHost}
-                    onClose={() => changeTimelineMode("all")}
+                    onClose={closeEditorTool}
+                    composerOpen={workspaceTab === "direction" && !composerCollapsed}
+                    visible={timelineMode === "all" || timelineMode === "direction"}
                     zoom={zoom}
                     viewport={viewport}
                     time={time}
@@ -3452,7 +3593,7 @@ function StudioApp() {
                     update={update}
                     onSeek={(at) => { setTime(at); setPlaying(false); }}
                     focused={timelineMode === "direction"}
-                    onFocus={() => changeTimelineMode("direction")}
+                    onFocus={() => selectEditorTool("direction", true)}
                   />}
                   {(timelineMode === "all" || timelineMode === "sound") && <>
                   <SoundtrackTimeline
@@ -3461,7 +3602,7 @@ function StudioApp() {
                     zoom={zoom}
                     viewport={viewport}
                     expanded={soundtrackExpanded}
-                    onInspect={id => { elementEditor.close(); setAudioInspector(id); setSelected(id); setComposerCollapsed(true); setPlaying(false); }}
+                    onInspect={id => { elementEditor.close(); setAudioInspector(id); setSelected(id); navigate({type:"inspect",tool:"sound"}); setPlaying(false); }}
                     onExpand={() => setSoundtrackExpanded((v) => !v)}
                     onOpen={(target) => {
                       sound.setFocus(target);
@@ -3483,7 +3624,7 @@ function StudioApp() {
                     update={update}
                     selected={selected}
                     onSelect={id => { elementEditor.close(); setSelected(id); if (audioInspector) setAudioInspector(id); }}
-                    onInspect={id => { elementEditor.close(); setAudioInspector(id); setSelected(id); setComposerCollapsed(true); setPlaying(false); }}
+                    onInspect={id => { elementEditor.close(); setAudioInspector(id); setSelected(id); navigate({type:"inspect",tool:"sound"}); setPlaying(false); }}
                     zoom={zoom}
                     viewport={viewport}
                     time={time}
@@ -3508,65 +3649,20 @@ function StudioApp() {
                         open={frameMenu}
                         onToggle={() => setFrameMenu(!frameMenu)}
                         onUse={useFrameInNewPrompt}
-                        onInsertImage={() => importAtPlayhead('image')}
-                        onInsertAudio={() => importAtPlayhead('audio')}
-                        onConnectImages={takeOf(activeClip)?.kind === 'image' && (()=>{
-                          const ordered=[...p.clips].sort((a,b)=>a.start-b.start), next=ordered[ordered.findIndex(c=>c.id===activeClip.id)+1];
-                          return next && takeOf(next)?.kind === 'image' ? ()=>setModal({type:'photo-story',beforeId:activeClip.id,afterId:next.id}) : undefined;
-                        })()}
+                        onConnectImages={connectPhotosAction(time)}
 
-                        onInsert={() => {
-                          let target;
-                          update((n) => {
-                            const defaults = createDefaultDraft(time);
-                            const result = insertPromptAtFrame(
-                              n,
-                              activeClip.id,
-                              time,
-                              defaults.settings.duration,
-                            );
-                            const d = beatDraft(n, result.node, defaults);
-                            d.frameOverrides = {
-                              start: {
-                                mode: "manual",
-                                frame: result.frames.start,
-                              },
-                              end: { mode: "manual", frame: result.frames.end },
-                            };
-                            d.automation = {
-                              ...d.automation,
-                              frames: true,
-                              startFrame: true,
-                              endFrame: true,
-                            };
-                            const source = n.drafts.find(
-                              (x) =>
-                                x.targetId === activeClip.id ||
-                                x.id === activeClip.sourceDraftId,
-                            );
-                            if (source) {
-                              d.referenceIds = [...source.referenceIds];
-                              d.referenceOptions = structuredClone(
-                                source.referenceOptions || {},
-                              );
-                            }
-                            n.drafts.push(d);
-                            n.activeDraftId = d.id;
-                            target = result.slot;
-                          });
-                          setTime(target.start);
-                          setSelected(target.id);
-                          setSelectedGroupId(null);
-                          setComposerCollapsed(false);
-                          setFrameMenu(false);
-                          setView("compose");
-                        }}
+                        onInsert={kind => insertTimelineItem(kind, time)}
                         onDragStart={() => {
-                          setComposerCollapsed(false);
+                          if (workspaceTab === "effects") return;
+                          revealComposer();
                           setSelectedGroupId(null);
                           setView("compose");
                         }}
                         onAttach={(key, frame) => {
+                          if (workspaceTab === "effects") {
+                            setEffectFrameAttachment({ id: uid(), boundary: key, frame });
+                            setFrameMenu(false); return;
+                          }
                           editDraft((d) => {
                             d.frameOverrides = {
                               ...d.frameOverrides,
@@ -3629,7 +3725,7 @@ function StudioApp() {
                 </div>
               </div>
             </div>
-            <footer className="timeline-footer">
+            {((footer) => planView ? planFooterHost && createPortal(footer,planFooterHost) : footer)(<footer className="timeline-footer">
               <div className="footer-info">
                 {selection.size > 1 && (
                   <span className="selection-count">
@@ -3776,13 +3872,13 @@ function StudioApp() {
                   />
                   <span className="tool-separator" />
                   <ClipMixer
-                    clip={selectedClip}
+                    clip={clipAudioTarget(p, selectedClip)?.record}
                     canDetach={!!takeOf(selectedClip)?.audio}
                     onDetach={detachSelectedAudio}
                     change={(fn) =>
                       update((n) => {
-                        const c = n.clips.find((c) => c.id === selected);
-                        if (c) fn(c);
+                        const target = clipAudioTarget(n, n.clips.find(c => c.id === selected));
+                        if (target) fn(target.record);
                       })
                     }
                     onAudio={() => setModal("audio")}
@@ -3796,11 +3892,11 @@ function StudioApp() {
                           0.1,
                           Math.min(
                             240,
-                            (viewport.width - 32) / Math.max(1, total),
+                            (((planView ? planBoardRef.current : timeline.current)?.clientWidth || viewport.width) - 32) / Math.max(1, total),
                           ),
                         ),
                       );
-                      timeline.current?.scrollTo({ left: 0 });
+                      (planView ? planBoardRef.current : timeline.current)?.scrollTo({ left: 0 });
                     }}
                   />
                   <Icon
@@ -3826,9 +3922,9 @@ function StudioApp() {
               </div>
               <button
                 className="library-open-button"
-                aria-label="Media Library"
+                aria-label="Library"
                 aria-expanded={poolExpanded}
-                title="Open Media Library"
+                title="Open Library"
                 onClick={() => {
                   setPlaying(false);
                   setPoolExpanded((v) => !v);
@@ -3837,7 +3933,7 @@ function StudioApp() {
                 <Images size={20} />
                 <Plus size={10} />
               </button>
-            </footer>
+            </footer>)}
           </section>
           <div className="assets-workspace-sheet" aria-hidden={!poolExpanded}>
             {poolExpanded && (
@@ -3852,6 +3948,18 @@ function StudioApp() {
                 onEdit={(assetId) =>
                   setModal({ type: "story-assets", assetId })
                 }
+                onUseStartFrame={item => act(async () => {
+                  const asset = item.entry ? await adoptLibraryItem(item) : item.asset;
+                  const media = asset?.media || item.media;
+                  if (media?.kind !== "image") return;
+                  editDraft(d => {
+                    d.frameOverrides = {...d.frameOverrides, start:{mode:"manual", frame:{mediaId:media.id,takeId:media.id,kind:"image",time:0,timelineCapture:true}}};
+                    d.automation = {...d.automation, frames:true,startFrame:true};
+                  });
+                  setPoolExpanded(false); setSelectedGroupId(null); selectEditorTool("prompt",true);
+                  notice(`${item.name} is now the start frame of your current prompt`);
+                })}
+                onOpenDetails={openLibraryDetails}
                 onDrag={dragPoolVideo}
                 onUse={useLibraryItem}
                 onImport={(kind, folderId) => {
@@ -3887,8 +3995,7 @@ function StudioApp() {
               />
             )}
           </div>
-        </>
-      )}
+      </>
       {busy && (
         <div className="busy">
           <LoaderCircle className="spin" size={16} />
@@ -3922,13 +4029,12 @@ function StudioApp() {
       {modal === "create" && (
         <CreateProject
           onClose={() => setModal(null)}
-          onCreate={async (body) => {
+          onCreate={async (body, entry = {}) => {
             await flush();
             const r = await api("/projects", body);
             await load(r.project.id);
-            setWorkspace(
-              body.templateId && body.includeSample ? "editor" : "story",
-            );
+              setPoolExpanded(false); elementEditor.close(); setComparing(false);
+            selectEditorTool(entry.start === "blank" ? "prompt" : "plan", true);
             setModal(null);
             setJobs([]);
           }}
@@ -3958,6 +4064,7 @@ function StudioApp() {
                 const folder = (await api("/folder", {})).path;
                 const opened = await api("/projects/open", { folder });
                 await load(opened.project.id);
+          closeEditorTool(); setPoolExpanded(false); elementEditor.close(); setComparing(false);
                 setModal(null);
               })
             }
@@ -4011,6 +4118,8 @@ function StudioApp() {
         )}
       {(modal === "assets" || modal?.type === "story-assets") && (
         <RecoveryBoundary onClose={() => setModal(null)}><AssetLibrary
+          saveStatus={status} onRetrySave={()=>act(()=>flush())}
+          onAdopt={adoptLibraryItem}
           generated={generationPool(p, jobs)
             .filter((entry) => entry.job)
             .map((entry) => ({
@@ -4025,7 +4134,7 @@ function StudioApp() {
           onInspect={(asset) =>
             setModal({ type: "details", job: asset.job, media: asset.media })
           }
-          manageOnly={workspace === "story"}
+          manageOnly={planView}
           initialAssetId={modal?.assetId}
           initialKind={modal?.createKind}
           initialFolderId={modal?.folderId}
@@ -4061,7 +4170,7 @@ function StudioApp() {
             project={p}
             onSeek={(at) => {
               setModal(null);
-              setWorkspace("editor");
+              selectEditorTool("prompt", true);
               setTime(at);
               setPlaying(false);
             }}
@@ -4081,7 +4190,7 @@ function StudioApp() {
             setHoldToGenerate={setHoldToGenerate}
             simulation={simulation}
             setSimulation={setSimulation}
-            initialTab={modal === "connections" ? "connections" : "prompting"}
+            initialTab={modal === "connections" ? "connections" : "project"}
           />
         </Modal>
       )}
@@ -4117,7 +4226,7 @@ function StudioApp() {
             range={repairRange}
             onRange={selectRulerRange}
             onSeek={setTime}
-            testMode={videoMode === "demo"}
+            testMode={!aiRouting?.routes.audio.enabled}
             onClose={() => setModal(null)}
             onMixer={() => setModal("audio")}
           />
@@ -4169,7 +4278,7 @@ function StudioApp() {
         </Modal>
       )}
       {modal?.type === "mismatch" && (
-        <Modal title="Take duration mismatch" onClose={() => setModal(null)}>
+        <Modal title="Version duration mismatch" onClose={() => setModal(null)}>
           <TakeMismatch
             clip={modal.clip}
             take={modal.take}
@@ -4200,8 +4309,8 @@ function StudioApp() {
                 : "No charge"}
             </span>
           </div>
-          {sound.lip.jobs.map(job=><button className="job-row" key={job.id} onClick={()=>{setModal(null);setWorkspace("editor");openSoundtrack();sound.setFocus({role:"dialogue"});}}><AudioLines size={20}/><span><b>Lip-sync</b><small>{job.state} · {job.stage}</small></span></button>)}
-          {sound.runs.map(run => <button className="job-row" key={run.id} onClick={() => { setModal(null); setWorkspace("editor"); openSoundtrack(); sound.setFocus({runId:run.id,role:run.units[0]?.role}); }}><AudioLines size={20} /><span><b>Soundtrack · {[...new Set(run.units.map(u => u.role))].join(" / ")}</b><small>{run.state} · {run.units.find(u => u.state === "processing")?.stage || `${run.units.filter(u => u.state === "ready").length}/${run.units.length} ready`}</small></span></button>)}
+          {sound.lip.jobs.map(job=><button className="job-row" key={job.id} onClick={()=>{setModal(null);selectEditorTool("prompt", true);openSoundtrack();sound.setFocus({role:"dialogue"});}}><AudioLines size={20}/><span><b>Lip-sync</b><small>{job.state} · {job.stage}</small></span></button>)}
+          {sound.runs.map(run => <button className="job-row" key={run.id} onClick={() => { setModal(null); selectEditorTool("prompt", true); openSoundtrack(); sound.setFocus({runId:run.id,role:run.units[0]?.role}); }}><AudioLines size={20} /><span><b>Soundtrack · {[...new Set(run.units.map(u => u.role))].join(" / ")}</b><small>{run.state} · {run.units.find(u => u.state === "processing")?.stage || `${run.units.filter(u => u.state === "ready").length}/${run.units.length} ready`}</small></span></button>)}
           {[...jobs].reverse().map((j) => (
             <div className="job-row" key={j.id}>
               {j.media ? (
@@ -4232,25 +4341,15 @@ function StudioApp() {
                   onAction={(url, body) => act(() => api(url, body))}
                 />
                 <small>
-                  {j.snapshot.model ||
-                    (j.kind === "clip-treatment"
-                      ? "Local processing"
-                      : "Export")}{" "}
-                  ·{" "}
-                  {j.snapshot.start !== undefined
-                    ? tc(j.snapshot.start) + "–" + tc(j.snapshot.end)
-                    : ""}{" "}
-                  ·{" "}
-                  {Math.floor(
-                    ((j.completedAt || Date.now()) - j.createdAt) / 1000,
-                  )}
-                  s elapsed
+                  {[j.snapshot.model || (j.kind === "clip-treatment" ? "Local processing" : "Export"), j.snapshot.start !== undefined ? tc(j.snapshot.start)+"–"+tc(j.snapshot.end) : null, jobElapsed(j)].filter(Boolean).join(" · ")}
+
                 </small>
               </div>
               {j.kind === "export" && j.state === "ready" ? (
+                <div className="export-result-actions"><button onClick={()=>setModal({type:"export-preview",job:j})}>Play</button><button onClick={()=>act(()=>api("/studio/folders/reveal",{target:"exports",projectId:p.id}))}>Show in folder</button>
                 <a className="button" href={"/api/exports/" + j.id}>
-                  <Download size={15} /> Download MP4
-                </a>
+                  <Download size={15} /> Download
+                </a></div>
               ) : (
                 <Icon
                   icon={Info}
@@ -4356,45 +4455,13 @@ function StudioApp() {
           }}
         />
       )}
+      {modal?.type === "export-preview" && <Modal title={modal.job.snapshot.fileName || "Export preview"} onClose={()=>setModal("jobs")} wide><video className="export-video" controls autoPlay src={`/api/exports/${modal.job.id}/preview`}/></Modal>}
       {modal?.type === "takes" &&
         (() => {
           const clip = p.clips.find((c) => c.id === modal.clipId);
           return (
-            <Modal title="Generation takes" onClose={() => setModal(null)} wide>
-              <div className="take-gallery">
-                {clip &&
-                  [...clip.takes].reverse().map((take, i) => {
-                    const job = jobs.find((j) => j.id === take.jobId);
-                    return (
-                      <button
-                        key={take.id}
-                        className={take.id === clip.activeTake ? "active" : ""}
-                        onClick={() => {
-                          selectTake(clip, take);
-                          setModal(null);
-                        }}
-                      >
-                        <img
-                          src={take.thumbnail}
-                          alt={job?.snapshot?.draft?.name || "Video take"}
-                        />
-                        <span>
-                          <b>
-                            Take {clip.takes.length - i}
-                            {take.id === clip.activeTake ? " · Selected" : ""}
-                          </b>
-                          <small>
-                            {job?.snapshot?.draft?.name || take.name}
-                          </small>
-                          <small>
-                            {take.duration.toFixed(1)}s ·{" "}
-                            {job?.snapshot?.model || "Local footage"}
-                          </small>
-                        </span>
-                      </button>
-                    );
-                  })}
-              </div>
+            <Modal title="Review versions" onClose={() => setModal(null)} wide>
+              {clip && <VersionReview clip={clip} jobs={jobs} onUse={take=>{selectTake(clip,take);setModal(null);}} onRemove={takeId=>{try{update(n=>removeGeneration(n,clip.id,takeId,jobs));notice("Version removed. Undo restores it.");}catch(e){notice(e.message);}}} onCompare={()=>{setSelected(clip.id);setComparing(true);setModal(null);setPlaying(false);}}/>}
               {clip &&
                 clipJobs(clip, jobs, p.episodeId)
                   .filter((j) => j.state !== "ready")

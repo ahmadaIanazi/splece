@@ -1,3 +1,5 @@
+import {sendRoutedText} from "./ai-routing.mjs";
+import { studioMode } from "./mode.mjs";
 import { visualBriefInstructions } from "../shared/asset-brief.mjs";
 import { planningReply, planningMessages, conversationFixture, validatePlanningMessage } from "../shared/planning-conversation.mjs";
 import { normalizeStoryResponse } from "../shared/story-response.mjs";
@@ -18,6 +20,7 @@ import {
   allocateStoryTime,
 } from "../shared/story-tree.mjs";
 import { randomUUID } from "node:crypto";
+import { credentials } from "./connections.mjs";
 import { createDeepSeekSettings } from "./smart.mjs";
 import { providerTransport } from "./security.mjs";
 import { compilePrompt, models as demoModels } from "./domain.mjs";
@@ -34,7 +37,7 @@ export async function requestStory(
   config,
   key,
   transport = providerTransport({
-    demo: config.mode !== "deepseek",
+    demo: config.mode === "demo",
     timeoutMs: 120000,
   }),
   onResponse = () => {},
@@ -201,7 +204,7 @@ export async function requestStory(
       }
     }
   } else {
-    if (!key) throw Error("Save your DeepSeek API key first.");
+    if (!key) throw Error("Connect the selected text provider first.");
     request = {
       model: config.model,
       stream: false,
@@ -547,11 +550,12 @@ export function installAuthoringRoutes(
     j.state = "running";
     save(j);
     try {
+      if(j.config.mode !== "demo" && await studioMode(data,"text") === "test") throw Error("Text AI is off. No paid request was submitted.");
       j.result = await requestStory(
         j.input,
         j.config,
-        await settings.key(),
-        undefined,
+        await credentials(data,j.config.provider || "deepseek").key(),
+        (url,options)=>sendRoutedText(data,j.config,JSON.parse(options.body),providerTransport({demo:false,timeoutMs:120000})),
         (result) => {
           j.result = result;
           save(j);
@@ -691,8 +695,8 @@ export function installAuthoringRoutes(
     if (req.body.action === "conversation") validatePlanningMessage(req.body.planningMessage);
     const config = await settings.config();
 
-    if (config.mode === "deepseek" && !(await settings.key()))
-      throw Error("Save your DeepSeek key first.");
+    if (config.mode !== "demo" && !(await settings.key()))
+      throw Error("Connect the selected text provider first.");
     const { project: p, revision } = getProject(req.params.id);
     const existing = all().find(
       (j) => req.body.requestId && j.projectId === p.id && (j.requestId === req.body.requestId || j.batchRequestId === req.body.requestId),
