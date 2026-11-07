@@ -10,13 +10,15 @@ const output = path.join(root, "artifacts/website-release");
 await build({
   root: path.join(root, "website"),
   publicDir: false,
-  build: { outDir: output, emptyOutDir: true, sourcemap: false },
+  build: { outDir: output, emptyOutDir: true, sourcemap: false, rollupOptions: { input: [path.join(root,"website/index.html"),path.join(root,"website/ios/index.html"),path.join(root,"website/privacy/index.html"),path.join(root,"website/support/index.html")] } },
 });
 // Explicit public assets only. Never copy public/downloads or the app bundle.
 for (const name of [
   "splece.svg",
   "brand/splece-logo-white.svg",
   "marketing/splece-editor.webp",
+  "marketing/ios/projects.jpg",
+  "marketing/ios/timeline.jpg",
   "marketing/demo/after-the-rain.mp4",
   "marketing/demo/coast.jpg",
   "marketing/demo/walk.jpg",
@@ -44,7 +46,7 @@ await fs.writeFile(
 );
 await fs.writeFile(
   path.join(output, "sitemap.xml"),
-  '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.splece.com/</loc></url></urlset>',
+  '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.splece.com/</loc></url><url><loc>https://www.splece.com/ios/</loc></url><url><loc>https://www.splece.com/privacy/</loc></url><url><loc>https://www.splece.com/support/</loc></url></urlset>',
 );
 await fs.writeFile(
   path.join(output, "vercel.json"),

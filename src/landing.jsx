@@ -21,6 +21,8 @@ import {
   Code2,
 } from "lucide-react";
 import {downloadDevice, platformNames} from "../shared/download-platform.mjs";
+import { isAppleMobile, iosDownload } from "../shared/ios-download.mjs";
+import { MobileShowcase } from "./landing-ios.jsx";
 import { releaseLink } from "../shared/home-entry.mjs";
 import "./landing.css";
 import "./landing-showcase.css";
@@ -79,7 +81,7 @@ const faqs = [
   ],
   [
     "When can I download it or see the source?",
-    "Splece is in beta. Choose your system below for current downloads and installation instructions. The source is available on GitHub under Apache 2.0. iOS and Android are coming soon.",
+    "Splece is in beta. Choose your system below for current downloads and installation instructions. The source is available on GitHub under Apache 2.0. See the iPhone and iPad section for mobile availability.",
   ],
   [
     "Do I need a powerful graphics card?",
@@ -198,6 +200,7 @@ function LocalWorkflow() {
   );
 }
 export function LandingPage({ studioAvailable, publicSite = false }) {
+  const [appleMobile] = useState(() => isAppleMobile(navigator));
   const [device] = useState(() => downloadDevice(navigator));
   const [platform, setPlatform] = useState(device.platform || "mac");
   const [releases, setReleases] = useState({});
@@ -210,6 +213,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
       .then((value) =>
         setReleases({
           version: typeof value?.version === "string" ? value.version : "0.1.0",
+          ios: iosDownload(value?.ios),
           mac: releaseLink(value?.mac),
           windows: releaseLink(value?.windows),
           linux: releaseLink(value?.linux),
@@ -244,15 +248,15 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
               />
             </a>
             <nav aria-label="Main navigation">
-              <a href="#workflow">The workflow</a>
+              <a href={publicSite ? "/ios/" : "#ios"}>iPhone &amp; iPad</a>
               <a href="#how-it-works">Local by design</a>
               <a href="https://github.com/ahmadaIanazi/splece/blob/main/docs/guide/README.md" target="_blank" rel="noreferrer">Docs</a>
             </nav>
             <a
               className="lp-nav-cta"
-              href={studioAvailable ? "/#home" : "#download"}
+              href={studioAvailable ? "/#home" : appleMobile ? "#ios" : "#download"}
             >
-              {studioAvailable ? "Open studio" : "Get Splece"}
+              {studioAvailable ? "Open studio" : appleMobile ? "Splece for iOS" : "Get Splece"}
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
           </header>
@@ -382,7 +386,6 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                     Alanazi. Explore the source on GitHub. The Splece
                     name and logo remain reserved.
                   </p>
-                  <p>iOS and Android are coming soon.</p>
                   <a className="lp-text-link" href="https://github.com/ahmadaIanazi/splece" target="_blank" rel="noreferrer">
                     View on GitHub{" "}
                     <ArrowUpRight size={15} aria-hidden="true" />
@@ -391,6 +394,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
               </article>
             </div>
           </section>
+          <MobileShowcase download={releases.ios} />
           <section className="lp-download lp-container" id="download">
             <div className="lp-section-heading">
               <div>
@@ -403,9 +407,10 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
                 Bring your own keys for Online AI. Provider charges apply.
               </p>
             </div>
+            <a className="lp-text-link" href="#ios">iPhone &amp; iPad availability <ArrowUpRight size={15} /></a>
             <div className="lp-download-grid">
               <div className="lp-download-card">
-                <p className="lp-device-note">{device.mobile ? "On your phone or tablet? Splece runs on a computer. Choose your desktop system below." : device.platform ? `Looks like you’re on ${platformNames[device.platform]}. Choose another system if needed.` : "Choose the computer you’ll use for Splece."}</p>
+                <p className="lp-device-note">{device.mobile ? "Choose a desktop download below." : device.platform ? `Looks like you’re on ${platformNames[device.platform]}. Choose another system if needed.` : "Choose the computer you’ll use for Splece."}</p>
                 <div
                   role="group"
                   className="lp-platform-toggle"
@@ -702,7 +707,7 @@ export function LandingPage({ studioAvailable, publicSite = false }) {
             height="36"
           />
         </a>
-        <span>A little direction. Endless possibility.</span>
+        {publicSite && <><a href="/privacy/">iOS privacy</a><a href="/support/">Support</a></>}
         <a href="#download">
           Desktop downloads <ArrowUpRight size={15} aria-hidden="true" />
         </a>
