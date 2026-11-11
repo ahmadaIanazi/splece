@@ -15,7 +15,7 @@ export function MobileShowcase({download, standalone=false}) {
       <Heading id="lp-ios-title">Splece for<br/><span>iPhone &amp; iPad.</span></Heading>
       <p>Storyboard a scene, direct a take, then cut it on the timeline. Edit and export on your device. Online AI sends selected prompts and references to your provider.</p>
       {download ? <a className="lp-button lp-button-primary" href={download.href}>{download.label} <ArrowUpRight size={16}/></a>
-        : <div><strong className="lp-ios-status">Public iOS download coming soon</strong><small>Already invited? Open your Apple invitation in <a className="lp-text-link" href="https://testflight.apple.com/">TestFlight</a>.</small></div>}
+        : <div><strong className="lp-ios-status">Submitted for App Store review</strong><small>Already invited? Open your Apple invitation in <a className="lp-text-link" href="https://testflight.apple.com/">TestFlight</a>.</small></div>}
       <small>Android is in development.</small>
     </div>
     <div className="lp-ios-gallery" aria-label="iPhone app screenshots">
